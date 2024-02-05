@@ -1,11 +1,32 @@
 # -*- coding: utf-8 -*-
+# MIT License
+#
+# Copyright (c) 2024 Weikun Han
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
 # ==============================================================================
-""" xxx
+""" Robinhood reports convertor
 
-xxx
+Please check the README file
 
 Author:
-xxx
+Weikun Han <weikunhan@gmail.com>
 
 Requirement:
 """
@@ -119,27 +140,27 @@ def main ():
             with pd.ExcelWriter(file_path) as writer:
                 result_df.to_excel(writer, sheet_name=stock_value, index=False)
                
-
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(
-        description='Scan DB Home image name mismatch issue PROD & DEMO')
+    parser = argparse.ArgumentParser(description='Robinhood reports convertor')
     parser.add_argument('-c', '--csv-files-path', type=str,
-                        default=os.path.expanduser('~/csv_files'),
+                        default=os.path.join(
+                            os.path.abspath(os.path.dirname(__file__)), 
+                            'csv_files'),
                         required=False,
-                        help='CSV files save path')
+                        help='CSV files input and output path')
     parser.add_argument('-l', '--log-files-path', type=str,
-                        default=os.path.expanduser('~/logs'),
+                        default=os.path.join(
+                            os.path.abspath(os.path.dirname(__file__)), 
+                            'logs'),
                         required=False,
                         help='Log files save path')
-    parser.add_argument('-r1', '--report-output-name-1', type=str,
-                        default='report_test.csv',
+    parser.add_argument('-n', '--report-csv-name', type=str,
+                        default='converted_reports.csv',
                         required=False,
-                        help='Report file 1 csv name')
+                        help='Report csv file name')
     args = parser.parse_args()
 
     print('-' * 80 + '\n')
-    print('Please run command to get authentication before using this script:\n')
-    print('oci session authenticate --profile-name DEFAULT --region us-ashburn-1\n')
+    print('Please check the README file\n')
     print('-' * 80 + '\n')
     main()
-

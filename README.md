@@ -17,11 +17,11 @@ $ git clone https://github.com/weikunhan/bdo-simulator-application.git
 ```
 Create [Python virtual environment](https://docs.python.org/3/library/venv.html)
 ```
-$ python3 -m venv ~/bdo-simulator-application/venv
+$ python3 -m venv ~/robinhood_reports_convertor/venv
 ```
 Active Python virual environment
 ```
-$ source ~/bdo-simulator-application/venv/bin/activate
+$ source ~/robinhood_reports_convertor/venv/bin/activate
 ```
 Install base Python packages
 ```

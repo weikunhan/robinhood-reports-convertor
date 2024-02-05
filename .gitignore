@@ -1,0 +1,8 @@
+#  Python virual environment
+venv
+__pycache__
+*.pyc
+
+# Project related information
+logs
+csv_files
