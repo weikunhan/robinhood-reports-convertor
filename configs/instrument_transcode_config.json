@@ -1,0 +1,33 @@
+{
+    "Title": "The configure file for instrument transcode config",
+    "stock": {
+        "Buy": [
+            true,
+            1
+        ],
+        "Sell": [
+            true,
+            -1
+        ],
+        "CDIV": [
+            false,
+            1
+        ],
+        "AFEE": [
+            false,
+            -1
+        ],
+        "DFEE": [
+            false,
+            -1
+        ]
+    },
+    "option": {
+        "STO": 1,
+        "STC": -1,
+        "BTO": 1,
+        "BTc": -1,
+        "OEXP": null,
+        "OASGN": null
+    }
+}

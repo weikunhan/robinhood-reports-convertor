@@ -23,34 +23,33 @@
 # ==============================================================================
 """ Robinhood reports convertor
 
-Please check the README file
+Welcome to use the Robinhood reports convertor!
+Please check the README file if have any question.
 
 Author:
 Weikun Han <weikunhan@gmail.com>
-
-Requirement:
 """
 
 import argparse
-from ast import Lambda
-from re import I
-from statistics import quantiles
 import pandas as pd
 import numpy as np
 from collections import defaultdict
-import logging
+from tqdm import tqdm
 import os
-import time
-from openpyxl.styles import NamedStyle
-from openpyxl import load_workbook
+import sys
+import json
+from utils.common_util import initial_log
+from typing import Union
 
-EXCEL_COL_NAME_LIST = ['Date', 'Quantity', 'Price', 'Amount']
-FORMAT_DICT = {'Date': lambda x: f'{x.striftime("%d/%m/%Y")}',
-               'Price': '${0:.02f}',
-               'Amount': '${0:.02f}'}
+EXCEL_COL_NAME_LIST = [
+    'Date', 'Description', 'Type', 'Quantity', 'Price', 'Amount', 'Profit']
+INSTRUMENT_TRANSCODE_CONFIG_PATCH = os.path.join(
+    os.path.abspath(os.path.dirname(__file__)), 
+    'configs',
+    'instrument_transcode_config.json')
 
-def initial_log() -> tuple:
-    """Initial log with the standard template
+def convert_dataframe_type(input_df: pd.DataFrame) -> pd.DataFrame:
+    """Convert dataframe type for some column
 
     Args:
 
@@ -60,107 +59,228 @@ def initial_log() -> tuple:
 
     """
 
-    logger = logging.getLogger()
-    logger_output_filepath = os.path.join(
-        args.log_files_path,
-        time.strftime('%Y%m%d_%H%M%S', time.localtime()) + '.log')
-    logger_file_handler = logging.FileHandler(logger_output_filepath)
-    logger_stream_handler = logging.StreamHandler()
-    logger_format_value = ('[%(asctime)s]-[%(processName)s]-[%(threadName)s]'
-                           '-[%(levelname)s]: %(message)s')
-    logger_stream_handler.setFormatter(logging.Formatter(logger_format_value))
-    logger_file_handler.setFormatter(logging.Formatter(logger_format_value))
-    logger.addHandler(logger_stream_handler)
-    logger.addHandler(logger_file_handler)
-    logger.setLevel(logging.INFO)
+    input_df['Quantity'] = pd.to_numeric(input_df['Quantity'], errors='coerce')
+    input_df['Quantity'] = input_df['Quantity'].fillna(0).astype(int)
+    return input_df  
 
-    return logger, logger_output_filepath
+def convert_string_value(string_value: str) -> float:
+    """Convert string value to float
 
+    Args:
 
+    Returns:
+
+    Raises:
+
+    """
+
+    if '$' in string_value:
+        string_value = string_value.replace('$', '')
+
+    if '(' in string_value:
+        string_value = string_value.replace('(', '')
+
+    if ')' in string_value:
+        string_value = string_value.replace(')', '')
+
+    if ',' in string_value:
+        string_value = string_value.replace(',', '')    
+
+    return float(string_value)
+
+def get_stock_price_value(key_list: list) -> Union[float, str]:
+    """Get stock price from dict key
+
+    Args:
+
+    Returns:
+
+    Raises:
+
+    """
+
+    return float(key_list[2]) if len(key_list) == 3 else ''
+
+def get_stock_profit_value(
+    quantity_sum_value: int, 
+    amount_sum_value: float,
+) -> Union[float, str]:
+    """Get stock profit value from order history
+
+    Args:
+
+    Returns:
+
+    Raises:
+
+    """
+
+    if quantity_sum_value == 0:
+        return -1 * amount_sum_value, 0.0
+    else:
+        return '', amount_sum_value
+
+def get_stock_and_option_dict(
+    instrument_config_dict: dict,
+    instrument_df: pd.DataFrame,
+) -> tuple:
+    """Get stock and option dict from grouped dataframe
+
+    Args:
+
+    Returns:
+
+    Raises:
+
+    """
+
+    # starting from Python 3.7, the dict also maintains insertion order
+    stock_data_dict = defaultdict(lambda: (0, 0.0))
+    option_data_dict = defaultdict(int)
+
+    for index, row in tqdm(instrument_df.iterrows(), 
+                           desc='Converting in progress'):
+        date_value = row["Activity Date"]
+        transcode_value = row['Trans Code']
+        
+        if transcode_value in instrument_config_dict['stock']:
+            if instrument_config_dict['stock'][transcode_value][0]: 
+                price_value = convert_string_value(row['Price'])
+                key_value = f'{date_value}-{transcode_value}-{price_value}' 
+
+            else:
+                key_value = f'{date_value}-{transcode_value}' 
+
+            factor_value = instrument_config_dict['stock'][transcode_value][1]
+            quantity_value = row['Quantity']
+            amount_value = convert_string_value(row['Amount'])     
+            stock_data_dict[key_value] = (
+                stock_data_dict[key_value][0] + factor_value * quantity_value,
+                stock_data_dict[key_value][1] + factor_value * amount_value) 
+
+        # TODO:         
+        if transcode_value in instrument_config_dict['option']:   
+            pass 
+
+    return stock_data_dict, option_data_dict    
+
+def save_result(
+    data_files_path: str,
+    input_csv_name: str,
+    instrument_value: str,
+    stock_data_dict: dict,
+    option_data_dict: dict,
+) -> None:   
+    """Save result into special format
+
+    Args:
+
+    Returns:
+
+    Raises:
+
+    """
+
+    quantity_sum_value = 0
+    amount_sum_value = 0.0
+    stock_data_list = []
+    option_datalist = []  
+    output_xlsx_filepath = os.path.join(
+        data_files_path, f'{input_csv_name}_{instrument_value}.xlsx')
+        
+    for key, value in reversed(stock_data_dict.items()):
+        quantity_sum_value += value[0]
+        amount_sum_value += value[1]
+        profit_value, amount_sum_value = get_stock_profit_value(
+            quantity_sum_value, amount_sum_value)
+        key_list = key.split('-')    
+        price_value = get_stock_price_value(key_list)    
+        stock_data_list.append(
+            [key_list[0], '', key_list[1], value[0], price_value, value[1],
+             profit_value])
+        
+    stock_df = pd.DataFrame(stock_data_list, columns=EXCEL_COL_NAME_LIST)   
+
+    with pd.ExcelWriter(output_xlsx_filepath) as writer:
+        stock_df.to_excel(writer, sheet_name='STOCK', index=False)
 
 def main ():
 
-    file_path = './output.xlsx'
+    if not os.path.exists(args.data_files_path):
+        os.makedirs(args.data_files_path)
 
-    if os.path.exists(file_path):
-        os.remove(file_path)
-    
-    stock_df = pd.read_csv('./test.csv', encoding='utf-8', on_bad_lines='skip', header=0)
+    if not os.path.exists(args.log_files_path):
+        os.makedirs(args.log_files_path)
 
-    unique_stock_list = stock_df['Instrument'].dropna().unique()
+    logger, logger_output_filepath = initial_log(args.log_files_path)
+    input_csv_filepath = os.path.join(args.data_files_path, args.input_csv_name)  
+    logger.info('=' * 80)
+    logger.info('Start convertor execution')
+    logger.info(f'The csv file loaed from: {input_csv_filepath}')
+    logger.info(f'The log file saved into: {logger_output_filepath}')
+    logger.info('=' * 80 + '\n')
 
-    #header = stock_df.columns.tolist()
-    stock_df['Quantity'] = pd.to_numeric(stock_df['Quantity'], errors='coerce')
-    stock_df['Quantity'] = stock_df['Quantity'].fillna(0).astype(int)
+    try:
+        instrument_config_dict = json.loads(
+            open(INSTRUMENT_TRANSCODE_CONFIG_PATCH).read())
+    except Exception as e:
+        logger.error(
+            f'Failed config from from: {INSTRUMENT_TRANSCODE_CONFIG_PATCH}')
+        logger.error(f'The detail error message: {e}')
+        sys.exit(1) 
 
-    
-    for stock_value in unique_stock_list[:1]:
-        data_dict = defaultdict(lambda: (0, 0))
-        data_list = []
+    try: 
+        input_df = pd.read_csv(input_csv_filepath,
+                               encoding='utf-8',
+                               on_bad_lines='skip', 
+                               header=0)
+    except Exception as e:
+        logger.error(f'Failed read csv from: {input_csv_filepath}')
+        logger.error(f'The detail error message: {e}')
+        sys.exit(1) 
 
-        for index, row in stock_df.iterrows():
-            if stock_value == row['Instrument']:
-                amount_value = row['Amount'].replace('$', '').replace('(', '').replace(')', '').replace(',', '')
-                
-                if 'AFEE' == row['Trans Code']:
-                    key_tuple = row['Activity Date'], '0'
-                    data_dict[key_tuple] = (
-                        0,
-                        data_dict[key_tuple][1] - float(amount_value)) 
-                elif 'Buy' == row['Trans Code']:
-                    key_tuple = row['Activity Date'], row['Price'].replace('$', '')
-                    data_dict[key_tuple] = (
-                        data_dict[key_tuple][0] + int(row['Quantity']),
-                        data_dict[key_tuple][1] - float(amount_value))     
-                elif 'Sell' == row['Trans Code']:
-                    key_tuple = row['Activity Date'], row['Price'].replace('$', '')
-                    data_dict[key_tuple] = (
-                        data_dict[key_tuple][0] - int(row['Quantity']),
-                        data_dict[key_tuple][1] + float(amount_value))   
-                else:
-                    print(f'found new value: {row["Trans Code"]}')
-                
- 
+    input_df = convert_dataframe_type(input_df)
 
-        print('++++++')
+    for instrument_value, instrument_df in input_df.groupby('Instrument'):
+        msg = ('Converting robinhood stock and option reports for: '
+               f'{instrument_value}...\n')
+        logger.info(msg)
+        stock_data_dict, option_data_dict = get_stock_and_option_dict(
+            instrument_config_dict, instrument_df)
+        msg = ('Saving converted stock and option result for: '
+               f'{instrument_value}...\n')
+        logger.info(msg)    
+        save_result(args.data_files_path, 
+                    args.input_csv_name,
+                    instrument_value,
+                    stock_data_dict,
+                    option_data_dict)
 
-        # create new data frame
-        for key, value in reversed(data_dict.items()):
-        
-            data_list.append([key[0], value[0], float(key[1]), value[1]])
-
-        result_df = pd.DataFrame(data_list, columns=EXCEL_COL_NAME_LIST)   
-       #result_df['Date'] = pd.to_datetime(result_df['Date'], format='%m/%d/%Y').dt.date
-        
-
-        if os.path.exists(file_path):
-            with pd.ExcelWriter(file_path, mode='a') as writer:
-                result_df.to_excel(writer, sheet_name=stock_value, index=False)
-        else:
-            with pd.ExcelWriter(file_path) as writer:
-                result_df.to_excel(writer, sheet_name=stock_value, index=False)
+    logger.info('=' * 80)
+    logger.info('Finished convertor execution')
+    logger.info(f'The xlsx files saved into: {args.data_files_path}')
+    logger.info(f'The log files saved into: {args.log_files_path}')
+    logger.info('=' * 80 + '\n')
                
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Robinhood reports convertor')
-    parser.add_argument('-c', '--csv-files-path', type=str,
+    parser.add_argument('-i', '--input-csv-name', type=str,
+                        required=True,
+                        help='Input report file name')
+    parser.add_argument('-d', '--data-files-path', type=str,
                         default=os.path.join(
-                            os.path.abspath(os.path.dirname(__file__)), 
-                            'csv_files'),
+                            os.path.abspath(os.path.dirname(__file__)), 'data'),
                         required=False,
-                        help='CSV files input and output path')
+                        help='Data files input and output path')
     parser.add_argument('-l', '--log-files-path', type=str,
                         default=os.path.join(
-                            os.path.abspath(os.path.dirname(__file__)), 
-                            'logs'),
+                            os.path.abspath(os.path.dirname(__file__)), 'logs'),
                         required=False,
                         help='Log files save path')
-    parser.add_argument('-n', '--report-csv-name', type=str,
-                        default='converted_reports.csv',
-                        required=False,
-                        help='Report csv file name')
     args = parser.parse_args()
 
     print('-' * 80 + '\n')
-    print('Please check the README file\n')
+    print('Welcome to use the Robinhood reports convertor!\n')
+    print('Please check the README file if have any question.\n')
     print('-' * 80 + '\n')
     main()
