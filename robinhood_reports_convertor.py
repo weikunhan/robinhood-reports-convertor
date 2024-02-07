@@ -38,8 +38,9 @@ from tqdm import tqdm
 import os
 import sys
 import json
-from utils.common_util import initial_log
 from typing import Union
+from utils.common_util import convert_dataframe_type
+from utils.common_util import initial_log
 
 EXCEL_COL_NAME_LIST = [
     'Date', 'Description', 'Type', 'Quantity', 'Price', 'Amount', 'Profit']
@@ -47,21 +48,6 @@ INSTRUMENT_TRANSCODE_CONFIG_PATCH = os.path.join(
     os.path.abspath(os.path.dirname(__file__)), 
     'configs',
     'instrument_transcode_config.json')
-
-def convert_dataframe_type(input_df: pd.DataFrame) -> pd.DataFrame:
-    """Convert dataframe type for some column
-
-    Args:
-
-    Returns:
-
-    Raises:
-
-    """
-
-    input_df['Quantity'] = pd.to_numeric(input_df['Quantity'], errors='coerce')
-    input_df['Quantity'] = input_df['Quantity'].fillna(0).astype(int)
-    return input_df  
 
 def convert_string_value(string_value: str) -> float:
     """Convert string value to float
@@ -216,7 +202,7 @@ def main ():
     input_csv_filepath = os.path.join(args.data_files_path, args.input_csv_name)  
     logger.info('=' * 80)
     logger.info('Start convertor execution')
-    logger.info(f'The csv file loaed from: {input_csv_filepath}')
+    logger.info(f'The csv file load from: {input_csv_filepath}')
     logger.info(f'The log file saved into: {logger_output_filepath}')
     logger.info('=' * 80 + '\n')
 
@@ -239,7 +225,7 @@ def main ():
         logger.error(f'The detail error message: {e}')
         sys.exit(1) 
 
-    input_df = convert_dataframe_type(input_df)
+    input_df = convert_col_type_dataframe(input_df, 'Quantity', 'int')  
 
     for instrument_value, instrument_df in input_df.groupby('Instrument'):
         msg = ('Converting robinhood stock and option reports for: '
@@ -259,7 +245,7 @@ def main ():
     logger.info('=' * 80)
     logger.info('Finished convertor execution')
     logger.info(f'The xlsx files saved into: {args.data_files_path}')
-    logger.info(f'The log files saved into: {args.log_files_path}')
+    logger.info(f'The log file saved into: {logger_output_filepath}')
     logger.info('=' * 80 + '\n')
                
 if __name__ == '__main__':

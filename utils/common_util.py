@@ -29,7 +29,28 @@ Weikun Han <weikunhan@gmail.com>
 
 import logging
 import os
+import pandas as pd
 import time
+
+def convert_col_type_dataframe(
+    input_df: pd.DataFrame, column_value: str, type_value: str) -> pd.DataFrame:
+    """Convert  column type in dataframe
+
+    Args:
+
+    Returns:
+
+    Raises:
+        ValueError: if type is not implemented
+
+    """
+
+    if type_value == 'int':
+        input_df[column_value] = pd.to_numeric(
+            input_df[column_value], errors='coerce')
+        input_df[column_value] = input_df[column_value].fillna(0).astype(int)
+
+    return input_df  
 
 def initial_log(log_files_path: str) -> tuple:
     """Initial log with the standard template
