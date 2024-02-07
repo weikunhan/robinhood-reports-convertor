@@ -1,5 +1,5 @@
 {
     "Title": "The configure file for csv preprocess config",
-    "01": ["report1.csv", "report2.csv"],
+    "01": ["report1.csv", "report2.csv", "report3.csv"],
     "02": null
 }

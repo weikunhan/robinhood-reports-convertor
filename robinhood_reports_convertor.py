@@ -31,19 +31,21 @@ Weikun Han <weikunhan@gmail.com>
 """
 
 import argparse
-import pandas as pd
+import json
 import numpy as np
+import os
+import pandas as pd
+import sys
 from collections import defaultdict
 from tqdm import tqdm
-import os
-import sys
-import json
 from typing import Union
-from utils.common_util import convert_dataframe_type
+from utils.common_util import convert_col_type_dataframe
 from utils.common_util import initial_log
 
-EXCEL_COL_NAME_LIST = [
-    'Date', 'Description', 'Type', 'Quantity', 'Price', 'Amount', 'Profit']
+STOCK_EXCEL_COL_NAME_LIST = [
+    'Date', 'Type', 'Quantity', 'Price', 'Amount', 'Profit']
+OPTION_EXCEL_COL_NAME_LIST = [
+    'Date', 'Description', 'Type', 'Quantity', 'Price', 'Amount', 'Profit']    
 INSTRUMENT_TRANSCODE_CONFIG_PATCH = os.path.join(
     os.path.abspath(os.path.dirname(__file__)), 
     'configs',
@@ -74,22 +76,10 @@ def convert_string_value(string_value: str) -> float:
 
     return float(string_value)
 
-def get_stock_price_value(key_list: list) -> Union[float, str]:
-    """Get stock price from dict key
-
-    Args:
-
-    Returns:
-
-    Raises:
-
-    """
-
-    return float(key_list[2]) if len(key_list) == 3 else ''
-
 def get_stock_profit_value(
     quantity_sum_value: int, 
     amount_sum_value: float,
+    skip_revert: bool,
 ) -> Union[float, str]:
     """Get stock profit value from order history
 
@@ -100,6 +90,9 @@ def get_stock_profit_value(
     Raises:
 
     """
+
+    if skip_revert:
+        return amount_sum_value, 0.0
 
     if quantity_sum_value == 0:
         return -1 * amount_sum_value, 0.0
@@ -133,7 +126,6 @@ def get_stock_and_option_dict(
             if instrument_config_dict['stock'][transcode_value][0]: 
                 price_value = convert_string_value(row['Price'])
                 key_value = f'{date_value}-{transcode_value}-{price_value}' 
-
             else:
                 key_value = f'{date_value}-{transcode_value}' 
 
@@ -172,20 +164,23 @@ def save_result(
     stock_data_list = []
     option_datalist = []  
     output_xlsx_filepath = os.path.join(
-        data_files_path, f'{input_csv_name}_{instrument_value}.xlsx')
+        data_files_path, 
+        f'{input_csv_name.split(".")[0]}_{instrument_value}.xlsx')
         
     for key, value in reversed(stock_data_dict.items()):
+        key_list = key.split('-')
         quantity_sum_value += value[0]
         amount_sum_value += value[1]
         profit_value, amount_sum_value = get_stock_profit_value(
-            quantity_sum_value, amount_sum_value)
-        key_list = key.split('-')    
-        price_value = get_stock_price_value(key_list)    
-        stock_data_list.append(
-            [key_list[0], '', key_list[1], value[0], price_value, value[1],
-             profit_value])
+            quantity_sum_value, amount_sum_value, len(key_list) == 2)   
+        stock_data_list.append([key_list[0], 
+                                key_list[1], 
+                                value[0], 
+                                float(key_list[2]) if len(key_list) == 3 else '', 
+                                value[1], 
+                                profit_value])
         
-    stock_df = pd.DataFrame(stock_data_list, columns=EXCEL_COL_NAME_LIST)   
+    stock_df = pd.DataFrame(stock_data_list, columns=STOCK_EXCEL_COL_NAME_LIST)   
 
     with pd.ExcelWriter(output_xlsx_filepath) as writer:
         stock_df.to_excel(writer, sheet_name='STOCK', index=False)
