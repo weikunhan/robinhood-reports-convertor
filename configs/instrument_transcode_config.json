@@ -9,6 +9,10 @@
             true,
             -1
         ],
+        "REC": [
+            true,
+            1
+        ],
         "CDIV": [
             false,
             1
@@ -26,7 +30,7 @@
         "STO": 1,
         "STC": -1,
         "BTO": 1,
-        "BTc": -1,
+        "BTC": -1,
         "OEXP": null,
         "OASGN": null
     }
