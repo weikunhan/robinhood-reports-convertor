@@ -35,9 +35,11 @@ import json
 import os
 import pandas as pd
 import sys
+from tqdm import tqdm
 from typing import Any
 from utils.common_util import convert_col_type_dataframe
 from utils.common_util import initial_log
+from utils.common_util import load_dataframe
 
 CSV_PREPROCESS_CONFIG_PATCH = os.path.join(
     os.path.abspath(os.path.dirname(__file__)), 
@@ -61,27 +63,26 @@ def get_non_overlap_dataframe(
 
     index_value = 1
 
-    while index_value < len(second_df) + 1:
+    for i in tqdm(range(1, len(second_df) + 1), desc='Validating in progress'):
         temp_first_df = first_df.iloc[-index_value:len(first_df)].copy()
-        temp_first_df.sort_values(by=['Amount', 'Price', 'Quantity'], inplace=True)
+        temp_first_df.sort_values(
+            by=['Instrument', 'Amount', 'Price', 'Quantity'], inplace=True)
         temp_first_df.reset_index(drop=True, inplace=True)
         temp_second_df = second_df.iloc[0:index_value].copy()
-        temp_second_df.sort_values(by=['Amount', 'Price', 'Quantity'], inplace=True)
+        temp_second_df.sort_values(
+            by=['Instrument', 'Amount', 'Price', 'Quantity'], inplace=True)
         temp_second_df.reset_index(drop=True, inplace=True)
 
-        if (temp_first_df.equals(temp_second_df)):
-            break
+        if temp_first_df.equals(temp_second_df):
+            msg = ('Found the total overlap rows in this report is: '
+                    f'{index_value}\n')
+            logger.warning(msg)
+            return second_df.drop(second_df.index[0:index_value])
         else:
             index_value +=1
 
-    if index_value == len(second_df):
-        logger.info('Not found the overlap rows in this report\n')
-        return second_df
-    else:
-        msg = ('Found the total overlap rows in this report is: '
-                f'{index_value}\n')
-        logger.warning(msg)
-        return second_df.drop(second_df.index[0:index_value])
+    logger.info('Not found the overlap rows in this report\n')
+    return second_df
 
 def save_result(
     input_df_list: list, output_csv_filepath: str, logger: Any
@@ -106,7 +107,7 @@ def save_result(
             output_df = pd.concat([output_df, filtered_df], ignore_index=True)
             count += 1
 
-        output_df.to_csv(csv_file_path, mode='a', header=False, index=False)
+        output_df.to_csv(output_csv_filepath, mode='a', header=False, index=False)
     else:   
         count = 2
         output_df = input_df_list[0]
@@ -117,7 +118,7 @@ def save_result(
             output_df = pd.concat([output_df, filtered_df], ignore_index=True)
             count += 1
 
-        output_df.to_csv(output_csv_filepath, index=False)    
+        output_df.to_csv(output_csv_filepath, index=False)
 
 def main ():   
 
@@ -125,7 +126,7 @@ def main ():
         os.makedirs(args.data_files_path)
 
     if not os.path.exists(args.log_files_path):
-        os.makedirs(args.log_files_path) 
+        os.makedirs(args.log_files_path)
 
     logger, logger_output_filepath = initial_log(args.log_files_path)    
     output_csv_filepath = os.path.join(args.data_files_path, args.output_csv_name)  
@@ -147,25 +148,26 @@ def main ():
         logger.error(f'The detail error message: {e}')
         sys.exit(1) 
 
-    input_df_list = []
+    last_df = None
     csv_config_dict = {key: value for key, value in csv_config_dict.items() 
                        if isinstance(value, list)}
-    csv_config_dict = sorted(csv_config_dict.items(), key=lambda x: int(x[0]))
+    csv_config_dict = {key: csv_config_dict[key] 
+                       for key in sorted(csv_config_dict.keys())}
 
     for key, value in csv_config_dict.items():
-        if input_df_list:
-            input_df_list = [input_df_list[-1]]    
-
         msg = ('Loading robinhood stock and option reports for part '
                f'{key}: {value}...\n')
         logger.info(msg)
+        input_df_list = [] if last_df is None else [last_df]
 
         for input_csv_name in value:
             input_df = load_dataframe(
                 os.path.join(args.data_files_path, input_csv_name), logger)
             input_df = convert_col_type_dataframe(input_df, 'Quantity', 'int')  
             input_df.drop(input_df.index[-1], inplace=True)       
-            input_df_list.append(input_df)    
+            input_df_list.append(input_df)  
+
+        last_df = input_df_list[-1]
 
         msg = ('Saving concated robinhood stock and option reports for part '
                f'{key}: {value}...\n')
