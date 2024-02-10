@@ -63,6 +63,12 @@ def convert_string_value(string_value: str) -> float:
 
     """
 
+    if pd.isnull(string_value):
+        return 0.0
+    
+    if row_df['Amount'] == '':
+        return 0.0
+
     if '$' in string_value:
         string_value = string_value.replace('$', '')
 
@@ -79,11 +85,11 @@ def convert_string_value(string_value: str) -> float:
 
 def get_option_dict(
     instrument_config_dict: dict,
-    date_value: str,
-    transcode_value: str,
-    logger: Any
+    option_data_dict: dict,
+    row_df: pd.DataFrame,
+    instrument_value: str
 ) -> tuple:
-    """Get option dict for main function
+    """Get option dict for top logic
 
     Args:
 
@@ -92,16 +98,25 @@ def get_option_dict(
     Raises:
 
     """   
+
+    factor_value = instrument_config_dict['option'][transcode_value][1]
+    description_value = row_df['Description'].split(f'{instrument_value} ')[-1]
+    quantity_value = row_df['Quantity']
+    price_value = convert_string_value(row_df['Price'])    
+    amount_value = convert_string_value(row_df['Amount'])
+    key_value = f'{date_value}-{transcode_value}-{price_value}-{description_value}' 
+    return (key_value, 
+            option_data_dict[key_value][0] + factor_value * quantity_value,
+            option_data_dict[key_value][1] + factor_value * amount_value)
 
 def get_stock_dict(
     instrument_config_dict: dict,
     stock_data_dict: dict,
-    row: pd.DataFrame,
+    row_df: pd.DataFrame,
     date_value: str,
-    transcode_value: str,
-    logger: Any
-) -> dict:
-    """Get stock dict for main function
+    transcode_value: str
+) -> tuple:
+    """Get stock dict for top logic
 
     Args:
 
@@ -111,31 +126,32 @@ def get_stock_dict(
 
     """   
 
-    quantity_value = row['Quantity']
+    
     price_value = 0.0
     amount_value = 0.0
 
-    if not pd.isnull(row['Price']) and row['Price'] != '':
-        price_value = convert_string_value(row['Price'])    
+    if not pd.isnull(row_df['Price']) and row_df['Price'] != '':
+        price_value = convert_string_value(row_df['Price'])    
 
-    if not pd.isnull(row['Amount']) and row['Amount'] != '':
-        amount_value = convert_string_value(row['Amount'])    
+    if not pd.isnull(row_df['Amount']) and row_df['Amount'] != '':
+        amount_value = convert_string_value(row_df['Amount'])
 
     if instrument_config_dict['stock'][transcode_value][0]: 
-        key_value = f'{date_value}-{transcode_value}-{price_value}' 
+        key_value = f'{date_value}-{transcode_value}-{price_value}-{}' 
     else:
         key_value = f'{date_value}-{transcode_value}' 
 
     factor_value = instrument_config_dict['stock'][transcode_value][1]
-    stock_data_dict[key_value] = (
-        stock_data_dict[key_value][0] + factor_value * quantity_value,
-        stock_data_dict[key_value][1] + factor_value * amount_value)  
+    quantity_value = row_df['Quantity']
 
-    return stock_data_dict
+    return (key_value, 
+            stock_data_dict[key_value][0] + factor_value * quantity_value,
+            stock_data_dict[key_value][1] + factor_value * amount_value)
 
 def get_stock_and_option_dict(
     instrument_config_dict: dict,
     instrument_df: pd.DataFrame,
+    instrument_value: str,
     logger: Any
 ) -> tuple:
     """Get stock and option dict from grouped dataframe
@@ -152,22 +168,39 @@ def get_stock_and_option_dict(
 
     stock_data_dict = defaultdict(lambda: (0, 0.0))
     option_data_dict = defaultdict(lambda: (0, 0.0))
+    trade_data_dict = defaultdict(list)
+    trade_value = 1
 
     for index, row in tqdm(instrument_df.iterrows(), 
                            desc='Converting in progress'):
-        date_value = row["Activity Date"]
+        date_value = row['Activity Date']
         transcode_value = row['Trans Code']
-        
+
         if transcode_value in instrument_config_dict['stock']:
-            stock_data_dict = get_stock_dict(
+            if date_value in trade_data_dict:
+                if transcode_value != trade_data_dict[date_value][-1]:
+                    trade_data_dict[date_value].append(transcode_value)
+                    trade_value += 1
+            else:
+                trade_data_dict[date_value].append(transcode_value)
+                trade_value = 1
+
+            key, quantity_value, amount_value = get_stock_dict(
                 instrument_config_dict, 
                 stock_data_dict,
                 row, 
                 date_value, 
                 transcode_value, 
+                trade_value,
                 logger)
-        elif transcode_value in instrument_config_dict['option']:   
-            pass
+            stock_data_dict[key] = (quantity_value, amount_value)
+        elif transcode_value in instrument_config_dict['option']:  
+            key, quantity_value, amount_value = get_option_dict(
+                instrument_config_dict, 
+                option_data_dict,
+                row, 
+                instrument_value)
+            option_data_dict[key] = (quantity_value, amount_value)
         else:
             logger.warning(f'Found undefined transcode: {transcode_value}\n')
 
@@ -176,7 +209,7 @@ def get_stock_and_option_dict(
 def save_option_result(
     instrument_config_dict: dict, 
     option_data_dict: dict, 
-    output_csv_filepath: str, 
+    output_xlsx_filepath: str, 
     logger: Any
 ) -> None:   
     """Save option result into special format
@@ -188,6 +221,53 @@ def save_option_result(
     Raises:
 
     """
+
+    position_data_dict = defaultdict(lambda: (0, 0.0))
+    option_data_list = []
+
+    for key, value in reversed(option_data_dict.items()):
+        date_value = key.split('-')[0]
+        transcode_value = key.split('-')[1]
+        price_value = key.split('-')[2]
+        description_value = key.split('-')[3]
+        quantity_value = value[0]
+        amount_value = value[1]
+
+        if instrument_config_dict['option'][transcode_value][0]: 
+            position_data_dict[description_value] = (
+                position_data_dict[description_value][0] + quantity_value,
+                position_data_dict[description_value][1] + amount_value)
+
+            if position_data_dict[description_value][0] != 0:
+                option_data_list.append([date_value,
+                                         description_value,
+                                         transcode_value,
+                                         quantity_value,
+                                         price_value,
+                                         amount_value,
+                                         ''])
+            else:
+                logger.info(f'Calculating profit on date: {date_value}...\n')
+                option_data_list.append([date_value,
+                                         description_value,
+                                         transcode_value,
+                                         quantity_value,
+                                         price_value,
+                                         amount_value,
+                                         -position_data_dict[description_value][1]])
+        else:
+            option_data_list.append([date_value,
+                                     description_value,
+                                     transcode_value,
+                                     quantity_value,
+                                     price_value,
+                                     amount_value,
+                                     -position_data_dict[description_value][1]])
+
+    option_df = pd.DataFrame(option_data_list, columns=OPTION_EXCEL_COL_NAME_LIST) 
+
+    with pd.ExcelWriter(output_xlsx_filepath, mode='a') as writer:
+        option_df.to_excel(writer, sheet_name='OPTION', index=False)
 
 def save_stock_result(
     instrument_config_dict: dict,
@@ -219,6 +299,9 @@ def save_stock_result(
             price_value = key.split('-')[2]
             quantity_sum_value += quantity_value
             amount_sum_value += amount_value
+
+            if transcode_value == 'SPR':
+                quantity_sum_value = quantity_value
 
             if quantity_sum_value != 0:
                 stock_data_list.append([date_value,
@@ -274,24 +357,15 @@ def main ():
         logger.error(f'The detail error message: {e}')
         sys.exit(1) 
 
-    try: 
-        input_df = pd.read_csv(input_csv_filepath,
-                               encoding='utf-8',
-                               on_bad_lines='skip', 
-                               header=0)
-    except Exception as e:
-        logger.error(f'Failed read csv from: {input_csv_filepath}')
-        logger.error(f'The detail error message: {e}')
-        sys.exit(1) 
-
-    input_df = convert_col_type_dataframe(input_df, 'Quantity', 'int')  
+    input_df = load_dataframe(input_csv_filepath, logger)
+    input_df = convert_col_type_dataframe(input_df, 'Quantity', 'int')
 
     for instrument_value, instrument_df in input_df.groupby('Instrument'):
         msg = ('Converting robinhood stock and option reports for: '
                f'{instrument_value}...\n')
         logger.info(msg)
         stock_data_dict, option_data_dict = get_stock_and_option_dict(
-            instrument_config_dict, instrument_df, logger)
+            instrument_config_dict, instrument_df, instrument_value, logger)
         logger.info(f'Saving stock result for: {instrument_value}...\n')    
         save_stock_result(
             instrument_config_dict,
