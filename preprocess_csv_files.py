@@ -61,7 +61,7 @@ def get_non_overlap_dataframe(
 
     index_value = 1
 
-    while index_value < len(second_df):
+    while index_value < len(second_df) + 1:
         temp_first_df = first_df.iloc[-index_value:len(first_df)].copy()
         temp_first_df.sort_values(by=['Amount', 'Price', 'Quantity'], inplace=True)
         temp_first_df.reset_index(drop=True, inplace=True)
@@ -74,14 +74,14 @@ def get_non_overlap_dataframe(
         else:
             index_value +=1
 
-    if index_value == len(second_df) - 1:
+    if index_value == len(second_df):
         logger.info('Not found the overlap rows in this report\n')
         return second_df
     else:
-        msg = ('Found the overlap rows in this report index is: '
+        msg = ('Found the total overlap rows in this report is: '
                 f'{index_value}\n')
         logger.warning(msg)
-        return second_df.drop(second_df.index[0:index_value])        
+        return second_df.drop(second_df.index[0:index_value])
 
 def save_result(
     input_df_list: list, output_csv_filepath: str, logger: Any
@@ -96,16 +96,28 @@ def save_result(
 
     """
 
-    count = 2
-    output_df = input_df_list[0]
+    if os.path.exists(output_csv_filepath):
+        count = 1
+        output_df = pd.DataFrame()
 
-    for first_df, second_df in zip(input_df_list[:-1], input_df_list[1:]):
-        logger.info(f'Processing current part report number is: {count}...\n')
-        filtered_df = get_non_overlap_dataframe(first_df, second_df, logger)
-        output_df = pd.concat([output_df, filtered_df], ignore_index=True)
-        count += 1
+        for first_df, second_df in zip(input_df_list[:-1], input_df_list[1:]):
+            logger.info(f'Processing current part report number is: {count}...\n')
+            filtered_df = get_non_overlap_dataframe(first_df, second_df, logger)
+            output_df = pd.concat([output_df, filtered_df], ignore_index=True)
+            count += 1
 
-    output_df.to_csv(output_csv_filepath, index=False)
+        output_df.to_csv(csv_file_path, mode='a', header=False, index=False)
+    else:   
+        count = 2
+        output_df = input_df_list[0]
+
+        for first_df, second_df in zip(input_df_list[:-1], input_df_list[1:]):
+            logger.info(f'Processing current part report number is: {count}...\n')
+            filtered_df = get_non_overlap_dataframe(first_df, second_df, logger)
+            output_df = pd.concat([output_df, filtered_df], ignore_index=True)
+            count += 1
+
+        output_df.to_csv(output_csv_filepath, index=False)    
 
 def main ():   
 
@@ -118,10 +130,13 @@ def main ():
     logger, logger_output_filepath = initial_log(args.log_files_path)    
     output_csv_filepath = os.path.join(args.data_files_path, args.output_csv_name)  
     logger.info('=' * 80)
-    logger.info('Start CSV preprocess')
+    logger.info('Start preprocess CSV files')
     logger.info(f'The csv files load from: {args.data_files_path}')
     logger.info(f'The log file saved into: {logger_output_filepath}')
     logger.info('=' * 80 + '\n')
+
+    if os.path.exists(output_csv_filepath):
+        os.remove(output_csv_filepath)
 
     try:
         csv_config_dict = json.loads(
@@ -132,31 +147,24 @@ def main ():
         logger.error(f'The detail error message: {e}')
         sys.exit(1) 
 
+    input_df_list = []
+    csv_config_dict = {key: value for key, value in csv_config_dict.items() 
+                       if isinstance(value, list)}
+    csv_config_dict = sorted(csv_config_dict.items(), key=lambda x: int(x[0]))
+
     for key, value in csv_config_dict.items():
-        if not isinstance(value, list):
-            continue
+        if input_df_list:
+            input_df_list = [input_df_list[-1]]    
 
         msg = ('Loading robinhood stock and option reports for part '
                f'{key}: {value}...\n')
         logger.info(msg)
-        input_df_list = []    
-        
+
         for input_csv_name in value:
-            input_csv_filepath = os.path.join(
-                args.data_files_path, input_csv_name)
-
-            try: 
-                input_df = pd.read_csv(input_csv_filepath,
-                                    encoding='utf-8',
-                                    on_bad_lines='skip', 
-                                    header=0)
-            except Exception as e:
-                logger.error(f'Failed read csv from: {input_csv_filepath}')
-                logger.error(f'The detail error message: {e}')
-                sys.exit(1) 
-
+            input_df = load_dataframe(
+                os.path.join(args.data_files_path, input_csv_name), logger)
+            input_df = convert_col_type_dataframe(input_df, 'Quantity', 'int')  
             input_df.drop(input_df.index[-1], inplace=True)       
-            input_df = convert_col_type_dataframe(input_df, 'Quantity', 'int')              
             input_df_list.append(input_df)    
 
         msg = ('Saving concated robinhood stock and option reports for part '
@@ -165,7 +173,7 @@ def main ():
         save_result(input_df_list, output_csv_filepath, logger)
 
     logger.info('=' * 80)
-    logger.info('Finished CSV preprocess')
+    logger.info('Finished preprocess CSV files')
     logger.info(f'The csv file saved into: {output_csv_filepath}')
     logger.info(f'The log file saved into: {logger_output_filepath}')
     logger.info('=' * 80 + '\n')

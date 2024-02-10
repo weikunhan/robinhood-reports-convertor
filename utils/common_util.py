@@ -30,7 +30,9 @@ Weikun Han <weikunhan@gmail.com>
 import logging
 import os
 import pandas as pd
+import sys
 import time
+from typing import Any
 
 def convert_col_type_dataframe(
     input_df: pd.DataFrame, column_value: str, type_value: str) -> pd.DataFrame:
@@ -49,6 +51,8 @@ def convert_col_type_dataframe(
         input_df[column_value] = pd.to_numeric(
             input_df[column_value], errors='coerce')
         input_df[column_value] = input_df[column_value].fillna(0).astype(int)
+    else:
+        raise ValueError(f'Invalied type value {type_value}')
 
     return input_df  
 
@@ -77,3 +81,26 @@ def initial_log(log_files_path: str) -> tuple:
     logger.addHandler(logger_file_handler)
     logger.setLevel(logging.INFO)
     return logger, logger_output_filepath
+
+def load_dataframe(input_csv_filepath: str, logger: Any) ->  pd.DataFrame:
+    """Load dataframe from the csv file
+
+    Args:
+
+    Returns:
+
+    Raises:
+
+    """
+
+    try: 
+        input_df = pd.read_csv(input_csv_filepath, 
+                               encoding='utf-8', 
+                               on_bad_lines='skip', 
+                               header=0)
+    except Exception as e:
+        logger.error(f'Failed read csv from: {input_csv_filepath}')
+        logger.error(f'The detail error message: {e}')
+        sys.exit(1) 
+
+    return input_df
