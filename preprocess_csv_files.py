@@ -61,25 +61,20 @@ def get_non_overlap_dataframe(
 
     """
 
-    index_value = 1
-
     for i in tqdm(range(1, len(second_df) + 1), desc='Validating in progress'):
-        temp_first_df = first_df.iloc[-index_value:len(first_df)].copy()
+        temp_first_df = first_df.iloc[-i:len(first_df)].copy()
         temp_first_df.sort_values(
             by=['Instrument', 'Amount', 'Price', 'Quantity'], inplace=True)
         temp_first_df.reset_index(drop=True, inplace=True)
-        temp_second_df = second_df.iloc[0:index_value].copy()
+        temp_second_df = second_df.iloc[0:i].copy()
         temp_second_df.sort_values(
             by=['Instrument', 'Amount', 'Price', 'Quantity'], inplace=True)
         temp_second_df.reset_index(drop=True, inplace=True)
 
         if temp_first_df.equals(temp_second_df):
-            msg = ('Found the total overlap rows in this report is: '
-                    f'{index_value}\n')
+            msg = (f'Found the total overlap rows in this report is: {i}\n')
             logger.warning(msg)
-            return second_df.drop(second_df.index[0:index_value])
-        else:
-            index_value +=1
+            return second_df.drop(second_df.index[0:i])
 
     logger.info('Not found the overlap rows in this report\n')
     return second_df
