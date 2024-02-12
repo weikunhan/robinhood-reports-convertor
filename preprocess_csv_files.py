@@ -166,7 +166,7 @@ def main ():
 
         msg = ('Saving concated robinhood stock and option reports for part '
                f'{key}: {value}...\n')
-        logger.info(msg)  
+        logger.info(msg)
         save_result(input_df_list, output_csv_filepath, logger)
 
     logger.info('=' * 80)
