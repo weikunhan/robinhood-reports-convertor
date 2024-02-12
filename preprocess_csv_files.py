@@ -79,7 +79,7 @@ def get_non_overlap_dataframe(
     logger.info('Not found the overlap rows in this report\n')
     return second_df
 
-def save_result(
+def save_first_result(
     input_df_list: list, output_csv_filepath: str, logger: Any
 ) -> None:
     """Save result after combination without overlap rows 
@@ -92,28 +92,40 @@ def save_result(
 
     """
 
-    if os.path.exists(output_csv_filepath):
-        count = 1
-        output_df = pd.DataFrame()
+    count = 2
+    output_df = input_df_list[0]
 
-        for first_df, second_df in zip(input_df_list[:-1], input_df_list[1:]):
-            logger.info(f'Processing current part report number is: {count}...\n')
-            filtered_df = get_non_overlap_dataframe(first_df, second_df, logger)
-            output_df = pd.concat([output_df, filtered_df], ignore_index=True)
-            count += 1
+    for first_df, second_df in zip(input_df_list[:-1], input_df_list[1:]):
+        logger.info(f'Processing first part report number is: {count}...\n')
+        filtered_df = get_non_overlap_dataframe(first_df, second_df, logger)
+        output_df = pd.concat([output_df, filtered_df], ignore_index=True)
+        count += 1
 
-        output_df.to_csv(output_csv_filepath, mode='a', header=False, index=False)
-    else:   
-        count = 2
-        output_df = input_df_list[0]
+    output_df.to_csv(output_csv_filepath, index=False)
 
-        for first_df, second_df in zip(input_df_list[:-1], input_df_list[1:]):
-            logger.info(f'Processing current part report number is: {count}...\n')
-            filtered_df = get_non_overlap_dataframe(first_df, second_df, logger)
-            output_df = pd.concat([output_df, filtered_df], ignore_index=True)
-            count += 1
+def save_reset_result(
+    input_df_list: list, output_csv_filepath: str, logger: Any
+) -> None:
+    """Save result after combination without overlap rows 
 
-        output_df.to_csv(output_csv_filepath, index=False)
+    Args:
+
+    Returns:
+
+    Raises:
+
+    """
+
+    count = 1
+    output_df = pd.DataFrame()
+
+    for first_df, second_df in zip(input_df_list[:-1], input_df_list[1:]):
+        logger.info(f'Processing reset part report number is: {count}...\n')
+        filtered_df = get_non_overlap_dataframe(first_df, second_df, logger)
+        output_df = pd.concat([output_df, filtered_df], ignore_index=True)
+        count += 1
+
+    output_df.to_csv(output_csv_filepath, mode='a', header=False, index=False)
 
 def main ():   
 
@@ -167,7 +179,11 @@ def main ():
         msg = ('Saving concated robinhood stock and option reports for part '
                f'{key}: {value}...\n')
         logger.info(msg)
-        save_result(input_df_list, output_csv_filepath, logger)
+
+        if os.path.exists(output_csv_filepath):
+            save_reset_result(input_df_list, output_csv_filepath, logger)
+        else:
+            save_first_result(input_df_list, output_csv_filepath, logger)
 
     logger.info('=' * 80)
     logger.info('Finished preprocess CSV files')
