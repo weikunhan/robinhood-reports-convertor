@@ -257,6 +257,7 @@ def save_option_result(
                                      price_value,
                                      amount_value,
                                      -position_data_dict[description_value][1]])
+            position_data_dict[description_value] = (0, 0.0)
 
     option_df = pd.DataFrame(option_data_list, columns=OPTION_EXCEL_COL_NAME_LIST) 
 
