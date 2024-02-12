@@ -48,6 +48,8 @@ def convert_col_type_dataframe(
     """
 
     if type_value == 'int':
+        input_df[column_value] = input_df[column_value].astype(str)
+        input_df[column_value] = input_df[column_value].str.replace('S', '')
         input_df[column_value] = pd.to_numeric(
             input_df[column_value], errors='coerce')
         input_df[column_value] = input_df[column_value].fillna(0).astype(int)
