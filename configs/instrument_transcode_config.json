@@ -1,59 +1,42 @@
 {
-    "Title": "The configure file for instrument transcode config",
-    "stock": {
-        "Buy": [
-            true,
-            1
-        ],
-        "Sell": [
-            true,
-            -1
-        ],
-        "REC": [
-            true,
-            1
-        ],
-        "SPR": [
-            true,
-            1
-        ],
-        "CDIV": [
-            false,
-            1
-        ],
-        "AFEE": [
-            false,
-            -1
-        ],
-        "DFEE": [
-            false,
-            -1
-        ]
-    },
-    "option": {
-        "STO": [
-            true,
-            1
-        ],
-        "STC": [
-            true,
-            -1
-        ],
-        "BTO": [
-            true,
-            1
-        ],
-        "BTC": [
-            true,
-            -1
-        ],
-        "OEXP": [
-            false,
-            -1
-        ],
-        "OASGN": [
-            false,
-            -1
-        ]
-    }
+	"Title": "The configure file for instrument transcode config",
+	"stock": {
+		"Buy": [
+			0,
+			1
+		],
+		"Sell": [
+			0,
+			-1
+		],
+		"REC": [
+			1,
+			1
+		],
+		"SPR": [
+			2,
+			1
+		],
+		"CDIV": [
+			3,
+			1
+		],
+		"AFEE": [
+			3,
+			-1
+		],
+		"DFEE": [
+			3,
+			-1
+		]
+	},
+	"option": {
+		"STO": [0, -1],
+		"BTC": [0, 1],
+		"BTO": [0, 1],
+		"STC": [0, -1],
+		"OASGN": [0, 1],
+		"OEXCS": [0,-1],
+		"OEXP": [1,1]
+	}
 }
