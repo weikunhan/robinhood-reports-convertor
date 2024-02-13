@@ -115,7 +115,7 @@ def get_stock_dict(
             return (key_value, 
                     stock_data_dict[key_value][0] - factor_value * quantity_value,
                     0.0)
-    else if instrument_config_dict['stock'][transcode_value][0] == 3:
+    elif instrument_config_dict['stock'][transcode_value][0] == 3:
         return (key_value, 
                 0,
                 stock_data_dict[key_value][1] + factor_value * amount_value)
