@@ -41,6 +41,7 @@ from tqdm import tqdm
 from typing import Any
 from typing import Union
 from utils.common_util import convert_col_type_dataframe
+from utils.common_util import convert_string_value
 from utils.common_util import initial_log
 from utils.common_util import load_dataframe
 
@@ -52,37 +53,6 @@ INSTRUMENT_TRANSCODE_CONFIG_PATCH = os.path.join(
     os.path.abspath(os.path.dirname(__file__)), 
     'configs',
     'instrument_transcode_config.json')
-
-def convert_string_value(string_value: str) -> float:
-    """Convert string value to float
-
-    Args:
-
-    Returns:
-
-    Raises:
-
-    """
-
-    if pd.isnull(string_value):
-        return 0.0
-    
-    if string_value == '':
-        return 0.0
-
-    if '$' in string_value:
-        string_value = string_value.replace('$', '')
-
-    if '(' in string_value:
-        string_value = string_value.replace('(', '')
-
-    if ')' in string_value:
-        string_value = string_value.replace(')', '')
-
-    if ',' in string_value:
-        string_value = string_value.replace(',', '')    
-
-    return float(string_value)
 
 def get_option_dict(
     instrument_config_dict: dict,
@@ -102,15 +72,15 @@ def get_option_dict(
 
     """   
 
-    price_value = convert_string_value(row_df['Price'])   
+    price_value = row_df['Price']
     description_value = row_df['Description'].split(f'{instrument_value} ')[-1]
     factor_value = instrument_config_dict['option'][transcode_value][1]
     quantity_value = row_df['Quantity'] 
-    amount_value = convert_string_value(row_df['Amount'])
+    amount_value = row_df['Amount']
     key_value = f'{date_value}-{transcode_value}-{price_value}-{description_value}' 
     return (key_value, 
             option_data_dict[key_value][0] + factor_value * quantity_value,
-            option_data_dict[key_value][1] + factor_value * amount_value)
+            option_data_dict[key_value][1] - factor_value * amount_value)
 
 def get_stock_dict(
     instrument_config_dict: dict,
@@ -128,23 +98,31 @@ def get_stock_dict(
 
     Raises:
 
-    """   
+    """
 
-    price_value = convert_string_value(row_df['Price'])    
+    price_value = row_df['Price']  
     factor_value = instrument_config_dict['stock'][transcode_value][1]
     quantity_value = row_df['Quantity']
-    amount_value = convert_string_value(row_df['Amount'])
+    amount_value = row_df['Amount']
     key_value = f'{date_value}-{transcode_value}-{price_value}-{trade_value}' 
  
-    if (instrument_config_dict['stock'][transcode_value][0] == 2
-        and stock_data_dict[key_value][0] != 0):
+    if instrument_config_dict['stock'][transcode_value][0] == 2:
+        if stock_data_dict[key_value][0] == 0:
+            return (key_value, 
+                    stock_data_dict[key_value][0] + factor_value * quantity_value,
+                    0.0)
+        else:
+            return (key_value, 
+                    stock_data_dict[key_value][0] - factor_value * quantity_value,
+                    0.0)
+    else if instrument_config_dict['stock'][transcode_value][0] == 3:
         return (key_value, 
-                stock_data_dict[key_value][0] - factor_value * quantity_value,
+                0,
+                stock_data_dict[key_value][1] + factor_value * amount_value)
+    else:
+        return (key_value, 
+                stock_data_dict[key_value][0] + factor_value * quantity_value,
                 stock_data_dict[key_value][1] - factor_value * amount_value)
-
-    return (key_value, 
-            stock_data_dict[key_value][0] + factor_value * quantity_value,
-            stock_data_dict[key_value][1] + factor_value * amount_value)
 
 def get_stock_and_option_dict(
     instrument_config_dict: dict,
@@ -256,7 +234,7 @@ def save_option_result(
                                      quantity_value,
                                      price_value,
                                      amount_value,
-                                     -position_data_dict[description_value][1]])
+                                     position_data_dict[description_value][1]])
             position_data_dict[description_value] = (0, 0.0)
 
     option_df = pd.DataFrame(option_data_list, columns=OPTION_EXCEL_COL_NAME_LIST) 
@@ -316,7 +294,7 @@ def save_stock_result(
                                         quantity_value,
                                         price_value,
                                         amount_value,
-                                        -amount_sum_value])
+                                        amount_sum_value])
                 amount_sum_value = 0.0
    
     stock_df = pd.DataFrame(stock_data_list, columns=STOCK_EXCEL_COL_NAME_LIST)   
@@ -351,6 +329,8 @@ def main ():
 
     input_df = load_dataframe(input_csv_filepath, logger)
     input_df = convert_col_type_dataframe(input_df, 'Quantity', 'int')
+    input_df['Price'] = input_df['Price'].apply(convert_string_value)
+    input_df['Amount'] = input_df['Amount'].apply(convert_string_value)
 
     for instrument_value, instrument_df in input_df.groupby('Instrument'):
         msg = ('Converting robinhood stock and option reports for: '

@@ -56,7 +56,38 @@ def convert_col_type_dataframe(
     else:
         raise ValueError(f'Invalied type value {type_value}')
 
-    return input_df  
+    return input_df
+
+def convert_string_value(string_value: str) -> float:
+    """Convert string value to float
+
+    Args:
+
+    Returns:
+
+    Raises:
+
+    """
+
+    if pd.isnull(string_value):
+        return 0.0
+    
+    if string_value == '':
+        return 0.0
+
+    if '$' in string_value:
+        string_value = string_value.replace('$', '')
+
+    if '(' in string_value:
+        string_value = string_value.replace('(', '')
+
+    if ')' in string_value:
+        string_value = string_value.replace(')', '')
+
+    if ',' in string_value:
+        string_value = string_value.replace(',', '')    
+
+    return float(string_value)    
 
 def initial_log(log_files_path: str) -> tuple:
     """Initial log with the standard template
