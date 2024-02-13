@@ -106,7 +106,7 @@ def get_stock_dict(
     amount_value = row_df['Amount']
     key_value = f'{date_value}-{transcode_value}-{price_value}-{trade_value}' 
  
-    if instrument_config_dict['stock'][transcode_value][0] == 2:
+    if instrument_config_dict['stock'][transcode_value][0] == 1:
         if stock_data_dict[key_value][0] == 0:
             return (key_value, 
                     stock_data_dict[key_value][0] + factor_value * quantity_value,
@@ -115,7 +115,7 @@ def get_stock_dict(
             return (key_value, 
                     stock_data_dict[key_value][0] - factor_value * quantity_value,
                     0.0)
-    elif instrument_config_dict['stock'][transcode_value][0] == 3:
+    elif instrument_config_dict['stock'][transcode_value][0] == 2:
         return (key_value, 
                 0,
                 stock_data_dict[key_value][1] + factor_value * amount_value)
@@ -269,7 +269,7 @@ def save_stock_result(
         quantity_value = value[0]
         amount_value = value[1]
 
-        if instrument_config_dict['stock'][transcode_value][0] == 3: 
+        if instrument_config_dict['stock'][transcode_value][0] == 2: 
             stock_data_list.append([date_value, 
                                     transcode_value, 
                                     '', 
