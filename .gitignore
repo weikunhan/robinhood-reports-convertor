@@ -1,4 +1,5 @@
-#  Python virual environment
+#  Python virual environment information
+.vscode
 venv
 __pycache__
 *.pyc
