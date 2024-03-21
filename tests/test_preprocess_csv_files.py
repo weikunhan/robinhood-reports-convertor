@@ -33,8 +33,8 @@ Weikun Han <weikunhan@gmail.com>
 import logging
 import os
 import unittest
-from utils.common_util import convert_col_type_dataframe
-from utils.common_util import convert_string_value
+from utils.common_util import convert_col_type_for_dataframe
+from utils.common_util import convert_accounting_format_to_float
 from utils.common_util import initial_log
 from utils.common_util import load_dataframe
 
@@ -50,17 +50,25 @@ class TestSimulator(unittest.TestCase):
         data_files_path = os.path.join(
                 os.path.abspath(os.path.dirname(os.path.dirname(__file__))), 
                 'data')
-        true_csv_filepath = os.path.join(data_files_path, 'ground_true_data.csv')
-        test_csv_filepath = os.path.join(data_files_path, 'target_test_data.csv')
+        true_csv_filepath = os.path.join(
+            data_files_path, 'ground_true_data.csv')
+        test_csv_filepath = os.path.join(
+            data_files_path, 'target_test_data.csv')
         self.logger = initial_log(log_files_path)[0]
         self.true_df = load_dataframe(true_csv_filepath, self.logger)
-        self.true_df = convert_col_type_dataframe(self.true_df, 'Quantity', 'int')
-        self.true_df['Price'] = self.true_df['Price'].apply(convert_string_value)
-        self.true_df['Amount'] = self.true_df['Amount'].apply(convert_string_value)
+        self.true_df = convert_col_type_for_dataframe(
+            self.true_df, 'Quantity', 'int')
+        self.true_df['Price'] = self.true_df['Price'].apply(
+            convert_accounting_format_to_float)
+        self.true_df['Amount'] = self.true_df['Amount'].apply(
+            convert_accounting_format_to_float)
         self.test_df = load_dataframe(test_csv_filepath, self.logger)
-        self.test_df = convert_col_type_dataframe(self.test_df, 'Quantity', 'int')
-        self.test_df['Price'] = self.test_df['Price'].apply(convert_string_value)
-        self.test_df['Amount'] = self.test_df['Amount'].apply(convert_string_value)
+        self.test_df = convert_col_type_for_dataframe(
+            self.test_df, 'Quantity', 'int')
+        self.test_df['Price'] = self.test_df['Price'].apply(
+            convert_accounting_format_to_float)
+        self.test_df['Amount'] = self.test_df['Amount'].apply(
+            convert_accounting_format_to_float)
 
     def test_preprocess_csv_files_end_to_end_succeeded(self):
         

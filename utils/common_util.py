@@ -34,9 +34,9 @@ import sys
 import time
 from typing import Any
 
-def convert_col_type_dataframe(
+def convert_col_type_for_dataframe(
     input_df: pd.DataFrame, column_value: str, type_value: str) -> pd.DataFrame:
-    """Convert  column type in dataframe
+    """Convert column type for dataframe
 
     Args:
 
@@ -58,8 +58,8 @@ def convert_col_type_dataframe(
 
     return input_df
 
-def convert_string_value(string_value: str) -> float:
-    """Convert string value to float
+def convert_accounting_format_to_float(string_value: str) -> float:
+    """Convert accounting format to float
 
     Args:
 

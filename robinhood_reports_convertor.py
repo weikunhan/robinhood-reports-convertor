@@ -40,8 +40,8 @@ from collections import defaultdict
 from tqdm import tqdm
 from typing import Any
 from typing import Union
-from utils.common_util import convert_col_type_dataframe
-from utils.common_util import convert_string_value
+from utils.common_util import convert_col_type_for_dataframe
+from utils.common_util import convert_accounting_format_to_float
 from utils.common_util import initial_log
 from utils.common_util import load_dataframe
 
@@ -164,7 +164,7 @@ def get_stock_and_option_dict(
             key, quantity_value, amount_value = get_stock_dict(
                 instrument_config_dict, 
                 stock_data_dict,
-                row, 
+                row,  # type: ignore
                 date_value, 
                 transcode_value, 
                 trade_value)
@@ -173,7 +173,7 @@ def get_stock_and_option_dict(
             key, quantity_value, amount_value = get_option_dict(
                 instrument_config_dict, 
                 option_data_dict,
-                row, 
+                row, # type: ignore
                 date_value, 
                 transcode_value, 
                 instrument_value)
@@ -328,9 +328,11 @@ def main ():
         sys.exit(1) 
 
     input_df = load_dataframe(input_csv_filepath, logger)
-    input_df = convert_col_type_dataframe(input_df, 'Quantity', 'int')
-    input_df['Price'] = input_df['Price'].apply(convert_string_value)
-    input_df['Amount'] = input_df['Amount'].apply(convert_string_value)
+    input_df = convert_col_type_for_dataframe(input_df, 'Quantity', 'int')
+    input_df['Price'] = input_df['Price'].apply(
+        convert_accounting_format_to_float)
+    input_df['Amount'] = input_df['Amount'].apply(
+        convert_accounting_format_to_float)
 
     for instrument_value, instrument_df in input_df.groupby('Instrument'):
         msg = ('Converting robinhood stock and option reports for: '

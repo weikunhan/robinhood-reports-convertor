@@ -37,7 +37,7 @@ import pandas as pd
 import sys
 from tqdm import tqdm
 from typing import Any
-from utils.common_util import convert_col_type_dataframe
+from utils.common_util import convert_col_type_for_dataframe
 from utils.common_util import initial_log
 from utils.common_util import load_dataframe
 
@@ -170,7 +170,8 @@ def main ():
         for input_csv_name in value:
             input_df = load_dataframe(
                 os.path.join(args.data_files_path, input_csv_name), logger)
-            input_df = convert_col_type_dataframe(input_df, 'Quantity', 'int')  
+            input_df = convert_col_type_for_dataframe(
+                input_df, 'Quantity', 'int')  
             input_df.drop(input_df.index[-1], inplace=True)       
             input_df_list.append(input_df)  
 
