@@ -31,10 +31,8 @@ Weikun Han <weikunhan@gmail.com>
 """
 
 import argparse
-import json
 import os
 import pandas as pd
-import sys
 from tqdm import tqdm
 from typing import Any
 from utils.common_util import convert_col_type_for_dataframe

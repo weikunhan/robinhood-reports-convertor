@@ -31,15 +31,11 @@ Weikun Han <weikunhan@gmail.com>
 """
 
 import argparse
-import json
-import numpy as np
 import os
 import pandas as pd
-import sys
 from collections import defaultdict
 from tqdm import tqdm
 from typing import Any
-from typing import Union
 from utils.common_util import convert_col_type_for_dataframe
 from utils.common_util import convert_accounting_string_to_float
 from utils.common_util import initial_log
