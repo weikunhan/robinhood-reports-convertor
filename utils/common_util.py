@@ -28,6 +28,7 @@ Weikun Han <weikunhan@gmail.com>
 """
 
 import logging
+import json
 import os
 import pandas as pd
 import sys
@@ -58,8 +59,8 @@ def convert_col_type_for_dataframe(
 
     return input_df
 
-def convert_accounting_format_to_float(string_value: str) -> float:
-    """Convert accounting format to float
+def convert_accounting_string_to_float(string_value: str) -> float:
+    """Convert accounting string to float
 
     Args:
 
@@ -114,6 +115,26 @@ def initial_log(log_files_path: str) -> tuple:
     logger.addHandler(logger_file_handler)
     logger.setLevel(logging.INFO)
     return logger, logger_output_filepath
+
+def load_config(input_config_filepath: str, logger: Any) -> dict:
+    """Load conifg from input config path
+
+    Args:
+
+    Returns:
+
+    Raises:
+
+    """
+
+    try:
+        csv_config_dict = json.loads(open(input_config_filepath).read())
+    except Exception as e:
+        logger.error(f'Failed config from from: {input_config_filepath}')
+        logger.error(f'The detail error message: {e}')
+        sys.exit(1) 
+
+    return csv_config_dict
 
 def load_dataframe(input_csv_filepath: str, logger: Any) ->  pd.DataFrame:
     """Load dataframe from the csv file

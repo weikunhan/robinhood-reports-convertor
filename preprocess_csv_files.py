@@ -39,6 +39,7 @@ from tqdm import tqdm
 from typing import Any
 from utils.common_util import convert_col_type_for_dataframe
 from utils.common_util import initial_log
+from utils.common_util import load_config
 from utils.common_util import load_dataframe
 
 CSV_PREPROCESS_CONFIG_PATCH = os.path.join(
@@ -146,20 +147,12 @@ def main ():
     if os.path.exists(output_csv_filepath):
         os.remove(output_csv_filepath)
 
-    try:
-        csv_config_dict = json.loads(
-            open(CSV_PREPROCESS_CONFIG_PATCH).read())
-    except Exception as e:
-        logger.error(
-            f'Failed config from from: {CSV_PREPROCESS_CONFIG_PATCH}')
-        logger.error(f'The detail error message: {e}')
-        sys.exit(1) 
-
-    last_df = None
+    csv_config_dict = load_config(CSV_PREPROCESS_CONFIG_PATCH, logger)
     csv_config_dict = {key: value for key, value in csv_config_dict.items() 
                        if isinstance(value, list)}
     csv_config_dict = {key: csv_config_dict[key] 
                        for key in sorted(csv_config_dict.keys())}
+    last_df = None
 
     for key, value in csv_config_dict.items():
         msg = ('Loading robinhood stock and option reports for part '

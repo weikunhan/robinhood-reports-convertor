@@ -41,8 +41,9 @@ from tqdm import tqdm
 from typing import Any
 from typing import Union
 from utils.common_util import convert_col_type_for_dataframe
-from utils.common_util import convert_accounting_format_to_float
+from utils.common_util import convert_accounting_string_to_float
 from utils.common_util import initial_log
+from utils.common_util import load_config
 from utils.common_util import load_dataframe
 
 STOCK_EXCEL_COL_NAME_LIST = [
@@ -317,22 +318,14 @@ def main ():
     logger.info(f'The csv file load from: {input_csv_filepath}')
     logger.info(f'The log file saved into: {logger_output_filepath}')
     logger.info('=' * 80 + '\n')
-
-    try:
-        instrument_config_dict = json.loads(
-            open(INSTRUMENT_TRANSCODE_CONFIG_PATCH).read())
-    except Exception as e:
-        logger.error(
-            f'Failed config from from: {INSTRUMENT_TRANSCODE_CONFIG_PATCH}')
-        logger.error(f'The detail error message: {e}')
-        sys.exit(1) 
-
+    instrument_config_dict = load_config(
+        INSTRUMENT_TRANSCODE_CONFIG_PATCH, logger)
     input_df = load_dataframe(input_csv_filepath, logger)
     input_df = convert_col_type_for_dataframe(input_df, 'Quantity', 'int')
     input_df['Price'] = input_df['Price'].apply(
-        convert_accounting_format_to_float)
+        convert_accounting_string_to_float)
     input_df['Amount'] = input_df['Amount'].apply(
-        convert_accounting_format_to_float)
+        convert_accounting_string_to_float)
 
     for instrument_value, instrument_df in input_df.groupby('Instrument'):
         msg = ('Converting robinhood stock and option reports for: '
