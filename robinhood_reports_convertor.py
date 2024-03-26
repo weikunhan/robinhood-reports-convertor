@@ -85,7 +85,7 @@ def get_stock_dict(
     row_df: pd.DataFrame,
     date_value: str,
     transcode_value: str,
-    trade_value: str
+    day_trade_value: int
 ) -> tuple:
     """Get stock dict for top logic
 
@@ -101,7 +101,7 @@ def get_stock_dict(
     factor_value = instrument_config_dict['stock'][transcode_value][1]
     quantity_value = row_df['Quantity']
     amount_value = row_df['Amount']
-    key_value = f'{date_value}-{transcode_value}-{price_value}-{trade_value}' 
+    key_value = f'{date_value}-{transcode_value}-{price_value}-{day_trade_value}' 
  
     if instrument_config_dict['stock'][transcode_value][0] == 1:
         if stock_data_dict[key_value][0] == 0:
@@ -142,7 +142,7 @@ def get_stock_and_option_dict(
     stock_data_dict = defaultdict(lambda: (0, 0.0))
     option_data_dict = defaultdict(lambda: (0, 0.0))
     trade_data_dict = defaultdict(list)
-    trade_value = 1
+    day_trade_value = 1
 
     for index, row in tqdm(instrument_df.iterrows(), 
                            desc='Converting in progress'):
@@ -153,10 +153,10 @@ def get_stock_and_option_dict(
             if date_value in trade_data_dict:
                 if transcode_value != trade_data_dict[date_value][-1]:
                     trade_data_dict[date_value].append(transcode_value)
-                    trade_value += 1
+                    day_trade_value += 1
             else:
                 trade_data_dict[date_value].append(transcode_value)
-                trade_value = 1
+                day_trade_value = 1
 
             key, quantity_value, amount_value = get_stock_dict(
                 instrument_config_dict, 
@@ -164,7 +164,7 @@ def get_stock_and_option_dict(
                 row,  # type: ignore
                 date_value, 
                 transcode_value, 
-                trade_value)
+                day_trade_value)
             stock_data_dict[key] = (quantity_value, amount_value)
         elif transcode_value in instrument_config_dict['option']:  
             key, quantity_value, amount_value = get_option_dict(
