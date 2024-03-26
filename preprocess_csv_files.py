@@ -38,7 +38,7 @@ from typing import Any
 from utils.common_util import convert_col_type_for_dataframe
 from utils.common_util import initial_log
 from utils.common_util import load_config
-from utils.common_util import load_dataframe
+from utils.common_util import load_dataframe_from_csv
 
 CSV_PREPROCESS_CONFIG_PATCH = os.path.join(
     os.path.abspath(os.path.dirname(__file__)), 
@@ -158,9 +158,9 @@ def main ():
         logger.info(msg)
         input_df_list = [] if last_df is None else [last_df]
 
-        for input_csv_name in value:
-            input_df = load_dataframe(
-                os.path.join(args.data_files_path, input_csv_name), logger)
+        for csv_info_value in value:
+            input_df = load_dataframe_from_csv(
+                os.path.join(args.data_files_path, csv_info_value), logger)
             input_df = convert_col_type_for_dataframe(
                 input_df, 'Quantity', 'int')  
             input_df.drop(input_df.index[-1], inplace=True)       

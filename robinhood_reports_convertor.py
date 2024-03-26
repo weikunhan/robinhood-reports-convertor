@@ -40,7 +40,7 @@ from utils.common_util import convert_col_type_for_dataframe
 from utils.common_util import convert_accounting_string_to_float
 from utils.common_util import initial_log
 from utils.common_util import load_config
-from utils.common_util import load_dataframe
+from utils.common_util import load_dataframe_from_csv
 
 STOCK_EXCEL_COL_NAME_LIST = [
     'Date', 'Type', 'Quantity', 'Price', 'Amount', 'Profit']
@@ -316,7 +316,7 @@ def main ():
     logger.info('=' * 80 + '\n')
     instrument_config_dict = load_config(
         INSTRUMENT_TRANSCODE_CONFIG_PATCH, logger)
-    input_df = load_dataframe(input_csv_filepath, logger)
+    input_df = load_dataframe_from_csv(input_csv_filepath, logger)
     input_df = convert_col_type_for_dataframe(input_df, 'Quantity', 'int')
     input_df['Price'] = input_df['Price'].apply(
         convert_accounting_string_to_float)

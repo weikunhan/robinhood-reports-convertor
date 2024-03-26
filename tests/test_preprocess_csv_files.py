@@ -36,7 +36,7 @@ import unittest
 from utils.common_util import convert_col_type_for_dataframe
 from utils.common_util import convert_accounting_string_to_float
 from utils.common_util import initial_log
-from utils.common_util import load_dataframe
+from utils.common_util import load_dataframe_from_csv
 
 class TestSimulator(unittest.TestCase):
     """ Preprocess CSV files test"""
@@ -55,14 +55,14 @@ class TestSimulator(unittest.TestCase):
         test_csv_filepath = os.path.join(
             data_files_path, 'target_test_data.csv')
         self.logger = initial_log(log_files_path)[0]
-        self.true_df = load_dataframe(true_csv_filepath, self.logger)
+        self.true_df = load_dataframe_from_csv(true_csv_filepath, self.logger)
         self.true_df = convert_col_type_for_dataframe(
             self.true_df, 'Quantity', 'int')
         self.true_df['Price'] = self.true_df['Price'].apply(
             convert_accounting_string_to_float)
         self.true_df['Amount'] = self.true_df['Amount'].apply(
             convert_accounting_string_to_float)
-        self.test_df = load_dataframe(test_csv_filepath, self.logger)
+        self.test_df = load_dataframe_from_csv(test_csv_filepath, self.logger)
         self.test_df = convert_col_type_for_dataframe(
             self.test_df, 'Quantity', 'int')
         self.test_df['Price'] = self.test_df['Price'].apply(

@@ -35,30 +35,6 @@ import sys
 import time
 from typing import Any
 
-def convert_col_type_for_dataframe(
-    input_df: pd.DataFrame, column_value: str, type_value: str) -> pd.DataFrame:
-    """Convert column type for dataframe
-
-    Args:
-
-    Returns:
-
-    Raises:
-        ValueError: if type is not implemented
-
-    """
-
-    if type_value == 'int':
-        input_df[column_value] = input_df[column_value].astype(str)
-        input_df[column_value] = input_df[column_value].str.replace('S', '')
-        input_df[column_value] = pd.to_numeric(
-            input_df[column_value], errors='coerce')
-        input_df[column_value] = input_df[column_value].fillna(0).astype(int)
-    else:
-        raise ValueError(f'Invalied type value {type_value}')
-
-    return input_df
-
 def convert_accounting_string_to_float(string_value: str) -> float:
     """Convert accounting string to float
 
@@ -88,7 +64,31 @@ def convert_accounting_string_to_float(string_value: str) -> float:
     if ',' in string_value:
         string_value = string_value.replace(',', '')    
 
-    return float(string_value)    
+    return float(string_value)   
+
+def convert_col_type_for_dataframe(
+    input_df: pd.DataFrame, column_value: str, type_value: str) -> pd.DataFrame:
+    """Convert column type for dataframe
+
+    Args:
+
+    Returns:
+
+    Raises:
+        ValueError: if type is not implemented
+
+    """
+
+    if type_value == 'int':
+        input_df[column_value] = input_df[column_value].astype(str)
+        input_df[column_value] = input_df[column_value].str.replace('S', '')
+        input_df[column_value] = pd.to_numeric(
+            input_df[column_value], errors='coerce')
+        input_df[column_value] = input_df[column_value].fillna(0).astype(int)
+    else:
+        raise ValueError(f'Invalied type value {type_value}')
+
+    return input_df
 
 def initial_log(log_files_path: str) -> tuple:
     """Initial log with the standard template
@@ -136,7 +136,7 @@ def load_config(input_config_filepath: str, logger: Any) -> dict:
 
     return csv_config_dict
 
-def load_dataframe(input_csv_filepath: str, logger: Any) ->  pd.DataFrame:
+def load_dataframe_from_csv(input_csv_filepath: str, logger: Any) ->  pd.DataFrame:
     """Load dataframe from the csv file
 
     Args:
@@ -154,6 +154,29 @@ def load_dataframe(input_csv_filepath: str, logger: Any) ->  pd.DataFrame:
                                header=0)
     except Exception as e:
         logger.error(f'Failed read csv from: {input_csv_filepath}')
+        logger.error(f'The detail error message: {e}')
+        sys.exit(1) 
+
+    return input_df
+
+def load_dataframe_from_excel(
+        input_excel_filepath: str, sheet_name_value: str, logger: Any
+) ->  pd.DataFrame:
+    """Load dataframe from the excel file
+
+    Args:
+
+    Returns:
+
+    Raises:
+
+    """
+
+    try: 
+        input_df = pd.read_excel(
+            input_excel_filepath, sheet_name=sheet_name_value)
+    except Exception as e:
+        logger.error(f'Failed read excel from: {input_excel_filepath}')
         logger.error(f'The detail error message: {e}')
         sys.exit(1) 
 
