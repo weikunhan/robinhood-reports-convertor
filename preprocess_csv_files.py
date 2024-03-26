@@ -164,7 +164,7 @@ def main ():
             input_df = convert_col_type_for_dataframe(
                 input_df, 'Quantity', 'int')  
             input_df.drop(input_df.index[-1], inplace=True)       
-            input_df_list.append(input_df)  
+            input_df_list.append(input_df) # type: ignore
 
         last_df = input_df_list[-1]
 

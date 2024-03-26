@@ -54,7 +54,7 @@ INSTRUMENT_TRANSCODE_CONFIG_PATCH = os.path.join(
 def get_option_dict(
     instrument_config_dict: dict,
     option_data_dict: dict,
-    row_df: pd.DataFrame,
+    row_df: pd.Series,
     date_value: str,
     transcode_value: str,
     instrument_value: str
@@ -82,7 +82,7 @@ def get_option_dict(
 def get_stock_dict(
     instrument_config_dict: dict,
     stock_data_dict: dict,
-    row_df: pd.DataFrame,
+    row_df: pd.Series,
     date_value: str,
     transcode_value: str,
     day_trade_value: int
@@ -161,7 +161,7 @@ def get_stock_and_option_dict(
             key, quantity_value, amount_value = get_stock_dict(
                 instrument_config_dict, 
                 stock_data_dict,
-                row,  # type: ignore
+                row,
                 date_value, 
                 transcode_value, 
                 day_trade_value)
@@ -170,7 +170,7 @@ def get_stock_and_option_dict(
             key, quantity_value, amount_value = get_option_dict(
                 instrument_config_dict, 
                 option_data_dict,
-                row, # type: ignore
+                row,
                 date_value, 
                 transcode_value, 
                 instrument_value)
@@ -328,7 +328,7 @@ def main ():
                f'{instrument_value}...\n')
         logger.info(msg)
         stock_data_dict, option_data_dict = get_stock_and_option_dict(
-            instrument_config_dict, instrument_df, instrument_value, logger)
+            instrument_config_dict, instrument_df, str(instrument_value), logger)
         logger.info(f'Saving stock result for: {instrument_value}...\n')
         save_stock_result(
             instrument_config_dict,
