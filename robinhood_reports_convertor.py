@@ -144,8 +144,7 @@ def get_stock_and_option_dict(
     trade_data_dict = defaultdict(list)
     day_trade_value = 1
 
-    for index, row in tqdm(instrument_df.iterrows(), 
-                           desc='Converting in progress'):
+    for _, row in tqdm(instrument_df.iterrows(), desc='Converting in progress'):
         date_value = row['Activity Date']
         transcode_value = row['Trans Code']
 
