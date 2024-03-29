@@ -36,8 +36,8 @@ import pandas as pd
 from collections import defaultdict
 from tqdm import tqdm
 from typing import Any
-from utils.common_util import convert_col_type_for_dataframe
 from utils.common_util import convert_accounting_string_to_float
+from utils.common_util import convert_col_type_for_dataframe
 from utils.common_util import initial_log
 from utils.common_util import load_config
 from utils.common_util import load_dataframe_from_csv
@@ -54,10 +54,12 @@ INSTRUMENT_TRANSCODE_CONFIG_PATCH = os.path.join(
 def get_option_dict(
     instrument_config_dict: dict,
     option_data_dict: dict,
-    row_df: pd.Series,
     date_value: str,
+    description_value: str,
     transcode_value: str,
-    instrument_value: str
+    quantity_value: int,
+    price_value: float,
+    amount_value: float
 ) -> tuple:
     """Get option dict for top logic
 
@@ -69,11 +71,7 @@ def get_option_dict(
 
     """   
 
-    price_value = row_df['Price']
-    description_value = row_df['Description'].split(f'{instrument_value} ')[-1]
     factor_value = instrument_config_dict['option'][transcode_value][1]
-    quantity_value = row_df['Quantity'] 
-    amount_value = row_df['Amount']
     key_value = f'{date_value}-{transcode_value}-{price_value}-{description_value}' 
     return (key_value, 
             option_data_dict[key_value][0] + factor_value * quantity_value,
@@ -82,9 +80,11 @@ def get_option_dict(
 def get_stock_dict(
     instrument_config_dict: dict,
     stock_data_dict: dict,
-    row_df: pd.Series,
     date_value: str,
     transcode_value: str,
+    quantity_value: int,
+    price_value: float,
+    amount_value: float,
     day_trade_value: int
 ) -> tuple:
     """Get stock dict for top logic
@@ -97,10 +97,7 @@ def get_stock_dict(
 
     """
 
-    price_value = row_df['Price']  
     factor_value = instrument_config_dict['stock'][transcode_value][1]
-    quantity_value = row_df['Quantity']
-    amount_value = row_df['Amount']
     key_value = f'{date_value}-{transcode_value}-{price_value}-{day_trade_value}' 
  
     if instrument_config_dict['stock'][transcode_value][0] == 1:
@@ -141,39 +138,45 @@ def get_stock_and_option_dict(
 
     stock_data_dict = defaultdict(lambda: (0, 0.0))
     option_data_dict = defaultdict(lambda: (0, 0.0))
-    trade_data_dict = defaultdict(list)
-    day_trade_value = 1
+    day_trade_dict = defaultdict(list)
 
-    for _, row in tqdm(instrument_df.iterrows(), desc='Converting in progress'):
-        date_value = row['Activity Date']
-        transcode_value = row['Trans Code']
+    for row in tqdm(instrument_df.itertuples(index=False), desc='Converting in progress'):
+        date_value = row[0]
+        description_value = row[4].split(f'{instrument_value} ')[-1]
+        transcode_value = row[5]
+        quantity_value = row[6]
+        price_value = row[7]
+        amount_value = row[8]
 
         if transcode_value in instrument_config_dict['stock']:
-            if date_value in trade_data_dict:
-                if transcode_value != trade_data_dict[date_value][-1]:
-                    trade_data_dict[date_value].append(transcode_value)
-                    day_trade_value += 1
+            if date_value in day_trade_dict:
+                if transcode_value != day_trade_dict[date_value][-1]:
+                    day_trade_dict[date_value].append(
+                        (transcode_value, day_trade_dict[date_value][-1][1] + 1))
             else:
-                trade_data_dict[date_value].append(transcode_value)
-                day_trade_value = 1
+                day_trade_dict[date_value].append((transcode_value, 1))
 
-            key, quantity_value, amount_value = get_stock_dict(
+            key, quantity_sum_value, amount_sum_value = get_stock_dict(
                 instrument_config_dict, 
                 stock_data_dict,
-                row,
                 date_value, 
                 transcode_value, 
-                day_trade_value)
-            stock_data_dict[key] = (quantity_value, amount_value)
+                quantity_value,
+                price_value,
+                amount_value,
+                day_trade_dict[date_value][-1][1])
+            stock_data_dict[key] = (quantity_sum_value, amount_sum_value)
         elif transcode_value in instrument_config_dict['option']:  
-            key, quantity_value, amount_value = get_option_dict(
+            key, quantity_sum_value, amount_sum_value = get_option_dict(
                 instrument_config_dict, 
                 option_data_dict,
-                row,
-                date_value, 
+                date_value,       
+                description_value,
                 transcode_value, 
-                instrument_value)
-            option_data_dict[key] = (quantity_value, amount_value)
+                quantity_value,
+                price_value,
+                amount_value)
+            option_data_dict[key] = (quantity_sum_value, amount_sum_value)
         else:
             logger.warning(f'Found undefined transcode: {transcode_value}\n')
 
