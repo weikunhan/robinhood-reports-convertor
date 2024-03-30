@@ -202,9 +202,9 @@ def save_option_result(
     option_data_list = []
 
     for key, value in reversed(option_data_dict.items()):
-        date_value = key.split('-')[0]
+        date_value = pd.to_datetime(key.split('-')[0]).strftime('%Y-%m-%d')
         transcode_value = key.split('-')[1]
-        price_value = key.split('-')[2]
+        price_value = float(key.split('-')[2])
         description_value = key.split('-')[3]
         quantity_value = value[0]
         amount_value = value[1]
@@ -224,7 +224,7 @@ def save_option_result(
                                      quantity_value,
                                      price_value,
                                      amount_value,
-                                     ''])
+                                     None])
         else:
             logger.info(f'Calculating profit on date: {date_value}...\n')
             option_data_list.append([date_value,
@@ -262,17 +262,17 @@ def save_stock_result(
     stock_data_list = []
         
     for key, value in reversed(stock_data_dict.items()):
-        date_value = key.split('-')[0]
+        date_value = pd.to_datetime(key.split('-')[0]).strftime('%Y-%m-%d')
         transcode_value = key.split('-')[1]
-        price_value = key.split('-')[2]
+        price_value = float(key.split('-')[2])
         quantity_value = value[0]
         amount_value = value[1]
 
         if instrument_config_dict['stock'][transcode_value][0] == 2: 
             stock_data_list.append([date_value, 
                                     transcode_value, 
-                                    '', 
-                                    '',
+                                    None, 
+                                    None,
                                     amount_value, 
                                     amount_value])
         else:
@@ -285,7 +285,7 @@ def save_stock_result(
                                         quantity_value,
                                         price_value,
                                         amount_value,
-                                        ''])
+                                        None])
             else:
                 logger.info(f'Calculating profit on date: {date_value}...\n')
                 stock_data_list.append([date_value,
@@ -296,7 +296,7 @@ def save_stock_result(
                                         amount_sum_value])
                 amount_sum_value = 0.0
    
-    stock_df = pd.DataFrame(stock_data_list, columns=STOCK_EXCEL_COL_NAME_LIST)   
+    stock_df = pd.DataFrame(stock_data_list, columns=STOCK_EXCEL_COL_NAME_LIST) 
 
     with pd.ExcelWriter(output_xlsx_filepath) as writer:
         stock_df.to_excel(writer, sheet_name='STOCK', index=False)
