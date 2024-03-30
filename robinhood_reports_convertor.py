@@ -33,9 +33,9 @@ Weikun Han <weikunhan@gmail.com>
 import argparse
 import os
 import pandas as pd
+import tqdm
+import typing
 from collections import defaultdict
-from tqdm import tqdm
-from typing import Any
 from utils.common_util import convert_accounting_string_to_float
 from utils.common_util import convert_col_type_for_dataframe
 from utils.common_util import initial_log
@@ -122,7 +122,7 @@ def get_stock_and_option_dict(
     instrument_config_dict: dict,
     instrument_df: pd.DataFrame,
     instrument_value: str,
-    logger: Any
+    logger: typing.Any
 ) -> tuple:
     """Get stock and option dict from grouped dataframe
 
@@ -140,7 +140,8 @@ def get_stock_and_option_dict(
     option_data_dict = defaultdict(lambda: (0, 0.0))
     day_trade_dict = defaultdict(list)
 
-    for row in tqdm(instrument_df.itertuples(index=False), desc='Converting in progress'):
+    for row in tqdm.tqdm(instrument_df.itertuples(index=False), 
+                         desc='Converting in progress'):
         date_value = row[0]
         description_value = row[4].split(f'{instrument_value} ')[-1]
         transcode_value = row[5]
@@ -186,7 +187,7 @@ def save_option_result(
     instrument_config_dict: dict, 
     option_data_dict: dict, 
     output_xlsx_filepath: str, 
-    logger: Any
+    logger: typing.Any
 ) -> None:   
     """Save option result into special format
 
@@ -245,7 +246,7 @@ def save_stock_result(
     instrument_config_dict: dict,
     stock_data_dict: dict, 
     output_xlsx_filepath: str, 
-    logger: Any,
+    logger: typing.Any,
 ) -> None:   
     """Save stock result into special format
 

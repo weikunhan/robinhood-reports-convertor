@@ -33,8 +33,8 @@ Weikun Han <weikunhan@gmail.com>
 import argparse
 import os
 import pandas as pd
-from tqdm import tqdm
-from typing import Any
+import tqdm
+import typing
 from utils.common_util import convert_col_type_for_dataframe
 from utils.common_util import initial_log
 from utils.common_util import load_config
@@ -46,7 +46,7 @@ CSV_PREPROCESS_CONFIG_PATCH = os.path.join(
     'csv_proprocess_config.json')
 
 def get_non_overlap_dataframe(
-    first_df: pd.DataFrame, second_df: pd.DataFrame, logger: Any
+    first_df: pd.DataFrame, second_df: pd.DataFrame, logger: typing.Any
 ) -> pd.DataFrame:
     """Get non overlap dataframe after compare last and first rows
 
@@ -60,7 +60,8 @@ def get_non_overlap_dataframe(
 
     """
 
-    for i in tqdm(range(1, len(second_df) + 1), desc='Validating in progress'):
+    for i in tqdm.tqdm(range(1, len(second_df) + 1), 
+                       desc='Validating in progress'):
         temp_first_df = first_df.iloc[-i:len(first_df)].copy()
         temp_first_df.sort_values(
             by=['Instrument', 'Amount', 'Price', 'Quantity'], inplace=True)
@@ -79,7 +80,7 @@ def get_non_overlap_dataframe(
     return second_df
 
 def save_first_result(
-    input_df_list: list, output_csv_filepath: str, logger: Any
+    input_df_list: list, output_csv_filepath: str, logger: typing.Any
 ) -> None:
     """Save result after combination without overlap rows 
 
@@ -103,7 +104,7 @@ def save_first_result(
     output_df.to_csv(output_csv_filepath, index=False)
 
 def save_reset_result(
-    input_df_list: list, output_csv_filepath: str, logger: Any
+    input_df_list: list, output_csv_filepath: str, logger: typing.Any
 ) -> None:
     """Save result after combination without overlap rows 
 

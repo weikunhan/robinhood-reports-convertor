@@ -27,13 +27,13 @@ Author:
 Weikun Han <weikunhan@gmail.com>
 """
 
-import logging
 import json
+import logging
 import os
 import pandas as pd
 import sys
 import time
-from typing import Any
+import typing
 
 def convert_accounting_string_to_float(string_value: str) -> float:
     """Convert accounting string to float
@@ -67,7 +67,8 @@ def convert_accounting_string_to_float(string_value: str) -> float:
     return float(string_value)   
 
 def convert_col_type_for_dataframe(
-    input_df: pd.DataFrame, column_value: str, type_value: str) -> pd.DataFrame:
+    input_df: pd.DataFrame, column_value: str, type_value: str
+) -> pd.DataFrame:
     """Convert column type for dataframe
 
     Args:
@@ -116,7 +117,7 @@ def initial_log(log_files_path: str) -> tuple:
     logger.setLevel(logging.INFO)
     return logger, logger_output_filepath
 
-def load_config(input_config_filepath: str, logger: Any) -> dict:
+def load_config(input_config_filepath: str, logger: typing.Any) -> dict:
     """Load conifg from input config path
 
     Args:
@@ -136,7 +137,9 @@ def load_config(input_config_filepath: str, logger: Any) -> dict:
 
     return csv_config_dict
 
-def load_dataframe_from_csv(input_csv_filepath: str, logger: Any) ->  pd.DataFrame:
+def load_dataframe_from_csv(
+        input_csv_filepath: str, logger: typing.Any
+) -> pd.DataFrame:
     """Load dataframe from the csv file
 
     Args:
@@ -160,8 +163,8 @@ def load_dataframe_from_csv(input_csv_filepath: str, logger: Any) ->  pd.DataFra
     return input_df
 
 def load_dataframe_from_excel(
-        input_excel_filepath: str, sheet_name_value: str, logger: Any
-) ->  pd.DataFrame:
+        input_excel_filepath: str, sheet_name_value: str, logger: typing.Any
+) -> pd.DataFrame:
     """Load dataframe from the excel file
 
     Args:
