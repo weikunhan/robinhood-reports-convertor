@@ -49,7 +49,7 @@ def convert_accounting_string_to_float(string_value: str) -> float:
     if pd.isnull(string_value):
         return 0.0
     
-    if string_value == '':
+    if not string_value:
         return 0.0
 
     if '$' in string_value:
@@ -90,6 +90,19 @@ def convert_col_type_for_dataframe(
         raise ValueError(f'Invalied type value {type_value}')
 
     return input_df
+
+def convert_date_to_standard_format(date_value: str) -> str:
+    """Convert date to standard format
+
+    Args:
+
+    Returns:
+
+    Raises:
+
+    """
+
+    return pd.to_datetime(date_value).strftime('%Y-%m-%d')
 
 def initial_log(log_files_path: str) -> tuple:
     """Initial log with the standard template
@@ -138,7 +151,7 @@ def load_config(input_config_filepath: str, logger: typing.Any) -> dict:
     return csv_config_dict
 
 def load_dataframe_from_csv(
-        input_csv_filepath: str, logger: typing.Any
+    input_csv_filepath: str, logger: typing.Any
 ) -> pd.DataFrame:
     """Load dataframe from the csv file
 
@@ -151,19 +164,17 @@ def load_dataframe_from_csv(
     """
 
     try: 
-        input_df = pd.read_csv(input_csv_filepath, 
-                               encoding='utf-8', 
-                               on_bad_lines='skip', 
-                               header=0)
+        input_df = pd.read_csv(
+            input_csv_filepath, encoding='utf-8', on_bad_lines='skip', header=0)
     except Exception as e:
         logger.error(f'Failed read csv from: {input_csv_filepath}')
         logger.error(f'The detail error message: {e}')
-        sys.exit(1) 
+        sys.exit(1)
 
     return input_df
 
 def load_dataframe_from_excel(
-        input_excel_filepath: str, sheet_name_value: str, logger: typing.Any
+    input_excel_filepath: str, sheet_name_value: str, logger: typing.Any
 ) -> pd.DataFrame:
     """Load dataframe from the excel file
 
@@ -181,6 +192,6 @@ def load_dataframe_from_excel(
     except Exception as e:
         logger.error(f'Failed read excel from: {input_excel_filepath}')
         logger.error(f'The detail error message: {e}')
-        sys.exit(1) 
+        sys.exit(1)
 
     return input_df
