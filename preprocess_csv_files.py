@@ -48,7 +48,7 @@ CSV_PREPROCESS_CONFIG_PATCH = os.path.join(
 def get_non_overlap_dataframe(
     first_df: pd.DataFrame, second_df: pd.DataFrame, logger: typing.Any
 ) -> pd.DataFrame:
-    """Get non overlap dataframe after compare last and first rows
+    """Get non overlap dataframe
 
     Assume that first_df have more recently (new) data than second_df
 
