@@ -38,6 +38,7 @@ import typing
 from collections import defaultdict
 from utils.common_util import convert_accounting_string_to_float
 from utils.common_util import convert_col_type_for_dataframe
+from utils.common_util import convert_date_to_standard_format
 from utils.common_util import initial_log
 from utils.common_util import load_config
 from utils.common_util import load_dataframe_from_csv
@@ -61,7 +62,18 @@ def get_option_dict(
     price_value: float,
     amount_value: float
 ) -> tuple:
-    """Get option dict for top logic
+    """Get option dict
+
+    For the transcode value as group 1, we need handle it in result part. If the 
+    final position is negative, the factor value is 1; otherwise, it is -1. And 
+    the amount value is none.
+
+    For the transcode value as group 2, the factor value is used as config. And 
+    the amount value is none.
+
+    For the transcode value as group 0, the factor value is used as config. And 
+    the quantity value increases as the amount value decreases; 
+    otherwise, vice versa
 
     Args:
 
@@ -72,10 +84,20 @@ def get_option_dict(
     """   
 
     factor_value = instrument_config_dict['option'][transcode_value][1]
-    key_value = f'{date_value}-{transcode_value}-{price_value}-{description_value}' 
-    return (key_value, 
-            option_data_dict[key_value][0] + factor_value * quantity_value,
-            option_data_dict[key_value][1] - factor_value * amount_value)
+    key_value = f'{date_value}*{transcode_value}*{price_value}*{description_value}' 
+
+    if instrument_config_dict['option'][transcode_value][0] == 1:
+        return (key_value, 
+                option_data_dict[key_value][0] - factor_value * quantity_value,
+                float(0))
+    elif instrument_config_dict['option'][transcode_value][0] == 2:
+        return (key_value, 
+                option_data_dict[key_value][0] + factor_value * quantity_value,
+                float(0))
+    else:
+        return (key_value, 
+                option_data_dict[key_value][0] + factor_value * quantity_value,
+                option_data_dict[key_value][1] - factor_value * amount_value)
 
 def get_stock_dict(
     instrument_config_dict: dict,
@@ -87,7 +109,17 @@ def get_stock_dict(
     amount_value: float,
     day_trade_value: int
 ) -> tuple:
-    """Get stock dict for top logic
+    """Get stock dict
+
+    For the transcode value as group 1; if the current quantity value is 0, the 
+    factor value is 1; otherwise, it is -1. And the amount value is none.
+
+    For the transcode value as group 2, the factor value is used as config. And 
+    the quantity value is none.
+
+    For the transcode value as group 0, the factor value is used as config. And 
+    the quantity value increases as the amount value decreases; 
+    otherwise, vice versa
 
     Args:
 
@@ -98,20 +130,20 @@ def get_stock_dict(
     """
 
     factor_value = instrument_config_dict['stock'][transcode_value][1]
-    key_value = f'{date_value}-{transcode_value}-{price_value}-{day_trade_value}' 
+    key_value = f'{date_value}*{transcode_value}*{price_value}*{day_trade_value}' 
  
     if instrument_config_dict['stock'][transcode_value][0] == 1:
         if stock_data_dict[key_value][0] == 0:
             return (key_value, 
                     stock_data_dict[key_value][0] + factor_value * quantity_value,
-                    0.0)
+                    float(0))
         else:
             return (key_value, 
                     stock_data_dict[key_value][0] - factor_value * quantity_value,
-                    0.0)
+                    float(0))
     elif instrument_config_dict['stock'][transcode_value][0] == 2:
         return (key_value, 
-                0,
+                int(0),
                 stock_data_dict[key_value][1] + factor_value * amount_value)
     else:
         return (key_value, 
@@ -126,7 +158,7 @@ def get_stock_and_option_dict(
 ) -> tuple:
     """Get stock and option dict from grouped dataframe
 
-    starting from Python 3.7, the dict also maintains insertion order
+    From Python 3.7, the dict also maintains insertion order.
 
     Args:
 
@@ -138,7 +170,7 @@ def get_stock_and_option_dict(
 
     stock_data_dict = defaultdict(lambda: (0, 0.0))
     option_data_dict = defaultdict(lambda: (0, 0.0))
-    day_trade_dict = defaultdict(list)
+    day_trade_dict = {}
 
     for row in tqdm.tqdm(instrument_df.itertuples(index=False), 
                          desc='Converting in progress'):
@@ -151,11 +183,11 @@ def get_stock_and_option_dict(
 
         if transcode_value in instrument_config_dict['stock']:
             if date_value in day_trade_dict:
-                if transcode_value != day_trade_dict[date_value][-1]:
+                if transcode_value != day_trade_dict[date_value][-1][0]:
                     day_trade_dict[date_value].append(
                         (transcode_value, day_trade_dict[date_value][-1][1] + 1))
             else:
-                day_trade_dict[date_value].append((transcode_value, 1))
+                day_trade_dict[date_value] = [(transcode_value, 1)]
 
             key, quantity_sum_value, amount_sum_value = get_stock_dict(
                 instrument_config_dict, 
@@ -203,15 +235,15 @@ def save_option_result(
     option_data_list = []
 
     for key, value in reversed(option_data_dict.items()):
-        date_value = pd.to_datetime(key.split('-')[0]).strftime('%Y-%m-%d')
-        transcode_value = key.split('-')[1]
-        price_value = float(key.split('-')[2])
-        description_value = key.split('-')[3]
+        date_value = key.split('*')[0]
+        transcode_value = key.split('*')[1]
+        price_value = key.split('*')[2]
+        description_value = key.split('*')[3]
         quantity_value = value[0]
         amount_value = value[1]
         
         if (instrument_config_dict['option'][transcode_value][0] == 1
-            and position_data_dict[description_value][0] > 0):
+            and position_data_dict[description_value][0] < 0):
             quantity_value = -quantity_value
 
         position_data_dict[description_value] = (
@@ -219,25 +251,26 @@ def save_option_result(
             position_data_dict[description_value][1] + amount_value)
 
         if position_data_dict[description_value][0] != 0:
-            option_data_list.append([date_value,
-                                     description_value,
-                                     transcode_value,
-                                     quantity_value,
-                                     price_value,
-                                     amount_value,
+            option_data_list.append([str(date_value),
+                                     str(description_value),
+                                     str(transcode_value),
+                                     int(quantity_value),
+                                     float(price_value),
+                                     float(amount_value),
                                      None])
         else:
             logger.info(f'Calculating profit on date: {date_value}...\n')
-            option_data_list.append([date_value,
-                                     description_value,
-                                     transcode_value,
-                                     quantity_value,
-                                     price_value,
-                                     amount_value,
-                                     position_data_dict[description_value][1]])
+            option_data_list.append([str(date_value),
+                                     str(description_value),
+                                     str(transcode_value),
+                                     int(quantity_value),
+                                     float(price_value),
+                                     float(amount_value),
+                                     float(position_data_dict[description_value][1])])
             position_data_dict[description_value] = (0, 0.0)
 
-    option_df = pd.DataFrame(option_data_list, columns=OPTION_EXCEL_COL_NAME_LIST) 
+    option_df = pd.DataFrame(
+        option_data_list, columns=OPTION_EXCEL_COL_NAME_LIST) 
 
     with pd.ExcelWriter(output_xlsx_filepath, mode='a') as writer:
         option_df.to_excel(writer, sheet_name='OPTION', index=False)
@@ -263,38 +296,38 @@ def save_stock_result(
     stock_data_list = []
         
     for key, value in reversed(stock_data_dict.items()):
-        date_value = pd.to_datetime(key.split('-')[0]).strftime('%Y-%m-%d')
-        transcode_value = key.split('-')[1]
-        price_value = float(key.split('-')[2])
+        date_value = key.split('*')[0]
+        transcode_value = key.split('*')[1]
+        price_value = key.split('*')[2]
         quantity_value = value[0]
         amount_value = value[1]
 
         if instrument_config_dict['stock'][transcode_value][0] == 2: 
-            stock_data_list.append([date_value, 
-                                    transcode_value, 
-                                    None, 
-                                    None,
-                                    amount_value, 
-                                    amount_value])
+            stock_data_list.append([str(date_value), 
+                                    str(transcode_value), 
+                                    int(0), 
+                                    float(0),
+                                    float(amount_value), 
+                                    float(amount_value)])
         else:
             quantity_sum_value += quantity_value
             amount_sum_value += amount_value
 
             if quantity_sum_value != 0:
-                stock_data_list.append([date_value,
-                                        transcode_value,
-                                        quantity_value,
-                                        price_value,
-                                        amount_value,
+                stock_data_list.append([str(date_value),
+                                        str(transcode_value),
+                                        int(quantity_value),
+                                        float(price_value),
+                                        float(amount_value),
                                         None])
             else:
                 logger.info(f'Calculating profit on date: {date_value}...\n')
-                stock_data_list.append([date_value,
-                                        transcode_value,
-                                        quantity_value,
-                                        price_value,
-                                        amount_value,
-                                        amount_sum_value])
+                stock_data_list.append([str(date_value),
+                                        str(transcode_value),
+                                        int(quantity_value),
+                                        float(price_value),
+                                        float(amount_value),
+                                        float(amount_sum_value)])
                 amount_sum_value = 0.0
    
     stock_df = pd.DataFrame(stock_data_list, columns=STOCK_EXCEL_COL_NAME_LIST) 
@@ -321,6 +354,8 @@ def main ():
         INSTRUMENT_TRANSCODE_CONFIG_PATCH, logger)
     input_df = load_dataframe_from_csv(input_csv_filepath, logger)
     input_df = convert_col_type_for_dataframe(input_df, 'Quantity', 'int')
+    input_df['Activity Date'] = input_df['Activity Date'].apply(
+        convert_date_to_standard_format)
     input_df['Price'] = input_df['Price'].apply(
         convert_accounting_string_to_float)
     input_df['Amount'] = input_df['Amount'].apply(
@@ -331,7 +366,10 @@ def main ():
                f'{instrument_value}...\n')
         logger.info(msg)
         stock_data_dict, option_data_dict = get_stock_and_option_dict(
-            instrument_config_dict, instrument_df, str(instrument_value), logger)
+            instrument_config_dict, 
+            instrument_df, 
+            str(instrument_value), 
+            logger)
         logger.info(f'Saving stock result for: {instrument_value}...\n')
         save_stock_result(
             instrument_config_dict,
