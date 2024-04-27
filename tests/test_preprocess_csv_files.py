@@ -30,11 +30,11 @@ Author:
 Weikun Han <weikunhan@gmail.com>
 """
 
-import logging
 import os
 import unittest
-from utils.common_util import convert_col_type_for_dataframe
 from utils.common_util import convert_accounting_string_to_float
+from utils.common_util import convert_col_type_for_dataframe
+from utils.common_util import convert_date_to_standard_format
 from utils.common_util import initial_log
 from utils.common_util import load_dataframe_from_csv
 
@@ -58,6 +58,8 @@ class TestSimulator(unittest.TestCase):
         self.true_df = load_dataframe_from_csv(true_csv_filepath, self.logger)
         self.true_df = convert_col_type_for_dataframe(
             self.true_df, 'Quantity', 'int')
+        self.true_df['Activity Date'] = self.true_df['Activity Date'].apply(
+            convert_date_to_standard_format)
         self.true_df['Price'] = self.true_df['Price'].apply(
             convert_accounting_string_to_float)
         self.true_df['Amount'] = self.true_df['Amount'].apply(
@@ -65,6 +67,8 @@ class TestSimulator(unittest.TestCase):
         self.test_df = load_dataframe_from_csv(test_csv_filepath, self.logger)
         self.test_df = convert_col_type_for_dataframe(
             self.test_df, 'Quantity', 'int')
+        self.test_df['Activity Date'] = self.test_df['Activity Date'].apply(
+            convert_date_to_standard_format)
         self.test_df['Price'] = self.test_df['Price'].apply(
             convert_accounting_string_to_float)
         self.test_df['Amount'] = self.test_df['Amount'].apply(
