@@ -56,32 +56,24 @@ class TestPreprocessCsvFiles(unittest.TestCase):
         self.true_df = convert_col_type_for_dataframe(
             self.true_df, 'Quantity', 'int')
         self.true_df['Activity Date'] = (
-            self.true_df['Activity Date'].apply(convert_date_to_standard_format)
-        )
+            self.true_df['Activity Date'].apply(convert_date_to_standard_format))
         self.true_df['Instrument'] = (
-            self.true_df['Instrument'].apply(convert_common_instrument_to_one)
-        )
+            self.true_df['Instrument'].apply(convert_common_instrument_to_one))
         self.true_df['Price'] = (
-            self.true_df['Price'].apply(convert_accounting_string_to_float)
-        )
+            self.true_df['Price'].apply(convert_accounting_string_to_float))
         self.true_df['Amount'] = (
-            self.true_df['Amount'].apply(convert_accounting_string_to_float)
-        )
+            self.true_df['Amount'].apply(convert_accounting_string_to_float))
         self.test_df = load_dataframe_from_csv(test_csv_filepath, self.logger)
         self.test_df = convert_col_type_for_dataframe(
             self.test_df, 'Quantity', 'int')
         self.test_df['Activity Date'] = (
-            self.test_df['Activity Date'].apply(convert_date_to_standard_format)
-        )
+            self.test_df['Activity Date'].apply(convert_date_to_standard_format))
         self.test_df['Instrument'] = (
-            self.test_df['Instrument'].apply(convert_common_instrument_to_one)
-        )
+            self.test_df['Instrument'].apply(convert_common_instrument_to_one))
         self.test_df['Price'] = (
-            self.test_df['Price'].apply(convert_accounting_string_to_float)
-        )
+            self.test_df['Price'].apply(convert_accounting_string_to_float))
         self.test_df['Amount'] = (
-            self.test_df['Amount'].apply(convert_accounting_string_to_float)
-        )
+            self.test_df['Amount'].apply(convert_accounting_string_to_float))
 
     def test_preprocess_csv_files_end_to_end_succeeded(self):
         """Test preprocess CSV files end to end succeeded"""
@@ -90,7 +82,6 @@ class TestPreprocessCsvFiles(unittest.TestCase):
         self.logger.info(
             'Start testing preprocess CSV files end to end succeeded')
         self.logger.info('=' * 80 + '\n')
-        
         self.logger.info('Testing length for both dataframe are same...\n')
         
         self.assertEqual(
@@ -110,7 +101,7 @@ class TestPreprocessCsvFiles(unittest.TestCase):
             (self.true_df.value_counts('Process Date')
             .equals(self.test_df.value_counts('Process Date'))),
             'Both Process Date count shoule be same'
-            )
+        )
 
         self.logger.info('Testing both dataframe have same Settle Date...\n')
 
@@ -118,7 +109,7 @@ class TestPreprocessCsvFiles(unittest.TestCase):
             (self.true_df.value_counts('Settle Date')
             .equals(self.test_df.value_counts('Settle Date'))),
             'Both Settle Date count shoule be same'
-            )
+        )
 
         self.logger.info('Testing both dataframe have same Instrument...\n')
 
@@ -126,7 +117,7 @@ class TestPreprocessCsvFiles(unittest.TestCase):
             (self.true_df.value_counts('Instrument')
             .equals(self.test_df.value_counts('Instrument'))),
             'Both Instrument count shoule be same'
-            )
+        )
 
         self.logger.info('Testing both dataframe have same Description...\n')
 
@@ -134,7 +125,7 @@ class TestPreprocessCsvFiles(unittest.TestCase):
             (self.true_df.value_counts('Description')
             .equals(self.test_df.value_counts('Description'))),
             'Both Description count shoule be same'
-            )
+        )
 
         self.logger.info('Testing both dataframe have same Trans Code...\n')
 
@@ -142,13 +133,15 @@ class TestPreprocessCsvFiles(unittest.TestCase):
             (self.true_df.value_counts('Trans Code')
             .equals(self.test_df.value_counts('Trans Code'))),
             'Both Trans Code count shoule be same'
-            )
+        )
+
         self.logger.info('Testing both dataframe have equal sum of Quantity...\n')
 
         self.assertEqual(
             self.true_df['Quantity'].sum(), 
             self.test_df['Quantity'].sum(),
-            'Both Quantity sum shoule be same')
+            'Both Quantity sum shoule be same'
+        )
 
         self.logger.info('Testing both dataframe have equal sum of Price...\n')
 
