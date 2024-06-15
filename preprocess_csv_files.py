@@ -43,25 +43,32 @@ from utils.common_util import load_dataframe_from_csv
 CSV_PREPROCESS_CONFIG_PATCH = os.path.join(
     os.path.abspath(os.path.dirname(__file__)), 
     'configs',
-    'csv_proprocess_config.json')
+    'csv_proprocess_config.json'
+)
 
 def get_non_overlap_dataframe(
-    first_df: pd.DataFrame, second_df: pd.DataFrame, logger: typing.Any
+    first_df: pd.DataFrame, 
+    second_df: pd.DataFrame, 
+    logger: typing.Any
 ) -> pd.DataFrame:
     """Get non overlap dataframe
 
-    Assume that first_df have more recently (new) data than second_df
+    Assume that first_df have more recently new data than second_df
 
     Args:
+        first_df: The DataFrame containing recent data
+        second_df: The DataFrame containing older data
+        logger: An object for logging messages
 
     Returns:
+        A new DataFrame without duplicate information
 
     Raises:
-
+        None
     """
 
-    for i in tqdm.tqdm(range(1, len(second_df) + 1), 
-                       desc='Validating in progress'):
+    for i in tqdm.tqdm(
+        range(1, len(second_df) + 1), desc='Validating in progress'):
         temp_first_df = first_df.iloc[-i:len(first_df)].copy()
         temp_first_df.sort_values(
             by=['Instrument', 'Amount', 'Price', 'Quantity'], inplace=True)
@@ -72,24 +79,30 @@ def get_non_overlap_dataframe(
         temp_second_df.reset_index(drop=True, inplace=True)
 
         if temp_first_df.equals(temp_second_df):
-            msg = (f'Found the total overlap rows in this report is: {i}\n')
-            logger.warning(msg)
+            logger.warning(
+                f'Found the total overlap rows in this report is: {i}\n')
             return second_df.drop(second_df.index[0:i])
 
     logger.info('Not found the overlap rows in this report\n')
     return second_df
 
 def save_first_result(
-    input_df_list: list, output_csv_filepath: str, logger: typing.Any
+    input_df_list: list[pd.DataFrame], 
+    output_csv_filepath: str, 
+    logger: typing.Any
 ) -> None:
     """Save result after combination without overlap rows 
 
     Args:
+        input_df_list: A list of pandas DataFrames
+        output_csv_filepath: The string of CSV saving file path
+        logger: An object for logging messages
 
     Returns:
+        None
 
     Raises:
-
+        None
     """
 
     count = 2
@@ -104,16 +117,22 @@ def save_first_result(
     output_df.to_csv(output_csv_filepath, index=False)
 
 def save_reset_result(
-    input_df_list: list, output_csv_filepath: str, logger: typing.Any
+    input_df_list: list[pd.DataFrame], 
+    output_csv_filepath: str, 
+    logger: typing.Any
 ) -> None:
     """Save result after combination without overlap rows 
 
     Args:
+        input_df_list: A list of pandas DataFrames
+        output_csv_filepath: The string of CSV saving file path
+        logger: An object for logging messages
 
     Returns:
-
+        None
+        
     Raises:
-
+        None
     """
 
     count = 1
@@ -136,7 +155,8 @@ def main ():
         os.makedirs(args.log_files_path)
 
     logger, logger_output_filepath = initial_log(args.log_files_path)    
-    output_csv_filepath = os.path.join(args.data_files_path, args.output_csv_name)  
+    output_csv_filepath = os.path.join(
+        args.data_files_path, args.output_csv_name)  
     logger.info('=' * 80)
     logger.info('Start preprocess CSV files')
     logger.info(f'The csv files load from: {args.data_files_path}')
@@ -147,16 +167,19 @@ def main ():
         os.remove(output_csv_filepath)
 
     csv_config_dict = load_config(CSV_PREPROCESS_CONFIG_PATCH, logger)
-    csv_config_dict = {key: value for key, value in csv_config_dict.items() 
-                       if isinstance(value, list)}
-    csv_config_dict = {key: csv_config_dict[key] 
-                       for key in sorted(csv_config_dict.keys())}
+    csv_config_dict = {
+        key: value for key, value in csv_config_dict.items() 
+        if isinstance(value, list)
+    }
+    csv_config_dict = {
+        key: csv_config_dict[key] for key in sorted(csv_config_dict.keys())}
     last_df = None
 
     for key, value in csv_config_dict.items():
-        msg = ('Loading robinhood stock and option reports for part '
-               f'{key}: {value}...\n')
-        logger.info(msg)
+        logger.info(
+            'Loading robinhood stock and option reports for part '
+            f'{key}: {value}...\n'
+        )
         input_df_list = [] if last_df is None else [last_df]
 
         for csv_info_value in value:
@@ -165,13 +188,13 @@ def main ():
             input_df = convert_col_type_for_dataframe(
                 input_df, 'Quantity', 'int')  
             input_df.drop(input_df.index[-1], inplace=True)       
-            input_df_list.append(input_df) # type: ignore
+            input_df_list.append(input_df)
 
         last_df = input_df_list[-1]
-
-        msg = ('Saving concated robinhood stock and option reports for part '
-               f'{key}: {value}...\n')
-        logger.info(msg)
+        logger.info(
+            'Saving concated robinhood stock and option reports for part '
+            f'{key}: {value}...\n'
+        )
 
         if os.path.exists(output_csv_filepath):
             save_reset_result(input_df_list, output_csv_filepath, logger)
@@ -186,19 +209,26 @@ def main ():
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Preprocess CSV files')
-    parser.add_argument('-o', '--output-csv-name', type=str,
-                        required=True,
-                        help='Output report file name')
-    parser.add_argument('-d', '--data-files-path', type=str,
-                        default=os.path.join(
-                            os.path.abspath(os.path.dirname(__file__)), 'data'),
-                        required=False,
-                        help='Data files input and output path')
-    parser.add_argument('-l', '--log-files-path', type=str,
-                        default=os.path.join(
-                            os.path.abspath(os.path.dirname(__file__)), 'logs'),
-                        required=False,
-                        help='Log files save path')
+    parser.add_argument(
+        '-o', 
+        '--output-csv-name', 
+        type=str,
+        required=True,
+        help='Output report file name')
+    parser.add_argument(
+        '-d', 
+        '--data-files-path', 
+        type=str,
+        default=os.path.join(os.path.abspath(os.path.dirname(__file__)), 'data'),
+        required=False,
+        help='Data files input and output path')
+    parser.add_argument(
+        '-l', 
+        '--log-files-path', 
+        type=str,
+        default=os.path.join(os.path.abspath(os.path.dirname(__file__)), 'logs'),
+        required=False,
+        help='Log files save path')
     args = parser.parse_args()
 
     print('-' * 80 + '\n')
