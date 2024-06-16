@@ -168,11 +168,14 @@ def main ():
 
     csv_config_dict = load_config(CSV_PREPROCESS_CONFIG_PATCH, logger)
     csv_config_dict = {
-        key: value for key, value in csv_config_dict.items() 
+        key: value 
+        for key, value in csv_config_dict.items() 
         if isinstance(value, list)
     }
     csv_config_dict = {
-        key: csv_config_dict[key] for key in sorted(csv_config_dict.keys())}
+        key: csv_config_dict[key] 
+        for key in sorted(csv_config_dict.keys())
+    }
     last_df = None
 
     for key, value in csv_config_dict.items():

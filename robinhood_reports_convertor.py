@@ -33,10 +33,12 @@ Weikun Han <weikunhan@gmail.com>
 import argparse
 import os
 import pandas as pd
+import re
 import tqdm
 import typing
 from collections import defaultdict
 from utils.common_util import convert_accounting_string_to_float
+from utils.common_util import convert_common_instrument_to_one
 from utils.common_util import convert_col_type_for_dataframe
 from utils.common_util import convert_date_to_standard_format
 from utils.common_util import initial_log
@@ -50,7 +52,8 @@ OPTION_EXCEL_COL_NAME_LIST = [
 INSTRUMENT_TRANSCODE_CONFIG_PATCH = os.path.join(
     os.path.abspath(os.path.dirname(__file__)), 
     'configs',
-    'instrument_transcode_config.json')
+    'instrument_transcode_config.json'
+)
 
 def get_option_dict(
     instrument_config_dict: dict,
@@ -76,28 +79,43 @@ def get_option_dict(
     otherwise, vice versa
 
     Args:
+        instrument_config_dict: A dictionary for configuration settings
+        option_data_dict: A dictionary containing the option data to save
+        date_value: The date for the option
+        description_value: The description of the option
+        transcode_value: The transcode of the option
+        quantity_value: The quantity of the option
+        price_value: The price of the option.
+        amount_value: The amount of the option
 
     Returns:
+        A tuple containing the option dictionary and any relevant metadata
 
     Raises:
-
+        None
     """   
 
     factor_value = instrument_config_dict['option'][transcode_value][1]
     key_value = f'{date_value}*{transcode_value}*{price_value}*{description_value}' 
 
     if instrument_config_dict['option'][transcode_value][0] == 1:
-        return (key_value, 
-                option_data_dict[key_value][0] - factor_value * quantity_value,
-                float(0))
+        return (
+            key_value, 
+            option_data_dict[key_value][0] - factor_value * quantity_value,
+            float(0)
+        )
     elif instrument_config_dict['option'][transcode_value][0] == 2:
-        return (key_value, 
-                option_data_dict[key_value][0] + factor_value * quantity_value,
-                float(0))
+        return (
+            key_value, 
+            option_data_dict[key_value][0] + factor_value * quantity_value,
+            float(0)
+        )
     else:
-        return (key_value, 
-                option_data_dict[key_value][0] + factor_value * quantity_value,
-                option_data_dict[key_value][1] - factor_value * amount_value)
+        return (
+            key_value, 
+            option_data_dict[key_value][0] + factor_value * quantity_value,
+            option_data_dict[key_value][1] - factor_value * amount_value
+        )
 
 def get_stock_dict(
     instrument_config_dict: dict,
@@ -122,33 +140,50 @@ def get_stock_dict(
     otherwise, vice versa
 
     Args:
+        instrument_config_dict: A dictionary for configuration settings
+        stock_data_dict: A dictionary containing the stock data to save
+        date_value: The date for the stock
+        transcode_value: The transcode of the stock
+        quantity_value: The quantity of the stock
+        price_value: The price of the stock.
+        amount_value: The amount of the stock
+        day_trade_value: The day trade of the stock 
 
     Returns:
-
+        A tuple containing the stock dictionary and any relevant metadata
+        
     Raises:
-
-    """
+        None
+    """   
 
     factor_value = instrument_config_dict['stock'][transcode_value][1]
     key_value = f'{date_value}*{transcode_value}*{price_value}*{day_trade_value}' 
  
     if instrument_config_dict['stock'][transcode_value][0] == 1:
         if stock_data_dict[key_value][0] == 0:
-            return (key_value, 
-                    stock_data_dict[key_value][0] + factor_value * quantity_value,
-                    float(0))
-        else:
-            return (key_value, 
-                    stock_data_dict[key_value][0] - factor_value * quantity_value,
-                    float(0))
-    elif instrument_config_dict['stock'][transcode_value][0] == 2:
-        return (key_value, 
-                int(0),
-                stock_data_dict[key_value][1] + factor_value * amount_value)
-    else:
-        return (key_value, 
+            return (
+                key_value, 
                 stock_data_dict[key_value][0] + factor_value * quantity_value,
-                stock_data_dict[key_value][1] - factor_value * amount_value)
+                float(0)
+            )
+        else:
+            return (
+                key_value, 
+                stock_data_dict[key_value][0] - factor_value * quantity_value,
+                float(0)
+            )
+    elif instrument_config_dict['stock'][transcode_value][0] == 2:
+        return (
+            key_value, 
+            int(0),
+            stock_data_dict[key_value][1] + factor_value * amount_value
+        )
+    else:
+        return (
+            key_value, 
+            stock_data_dict[key_value][0] + factor_value * quantity_value,
+            stock_data_dict[key_value][1] - factor_value * amount_value
+        )
 
 def get_stock_and_option_dict(
     instrument_config_dict: dict,
@@ -161,21 +196,32 @@ def get_stock_and_option_dict(
     From Python 3.7, the dict also maintains insertion order.
 
     Args:
+        instrument_config_dict: A dictionary for configuration settings
+        instrument_df: The DataFrame containing instrument data
+        instrument_value: The specific value identifying the instrument
+        logger: An object for logging messages
 
     Returns:
+        A tuple containing two dictionaries: stock_dict and option_dict
 
     Raises:
-
+        None
     """
 
     stock_data_dict = defaultdict(lambda: (0, 0.0))
     option_data_dict = defaultdict(lambda: (0, 0.0))
     day_trade_dict = {}
 
-    for row in tqdm.tqdm(instrument_df.itertuples(index=False), 
-                         desc='Converting in progress'):
+    for row in tqdm.tqdm(
+        instrument_df.itertuples(index=False), 
+        total=len(instrument_df),
+        desc='Converting in progress'
+    ):
         date_value = row[0]
-        description_value = row[4].split(f'{instrument_value} ')[-1]
+        description_value = (
+            re.sub(rf'{instrument_value}\d*', instrument_value, row[4])
+            .split(f'{instrument_value} ')[-1]
+        )
         transcode_value = row[5]
         quantity_value = row[6]
         price_value = row[7]
@@ -185,7 +231,9 @@ def get_stock_and_option_dict(
             if date_value in day_trade_dict:
                 if transcode_value != day_trade_dict[date_value][-1][0]:
                     day_trade_dict[date_value].append(
-                        (transcode_value, day_trade_dict[date_value][-1][1] + 1))
+                        (transcode_value, 
+                         day_trade_dict[date_value][-1][1] + 1)
+                    )
             else:
                 day_trade_dict[date_value] = [(transcode_value, 1)]
 
@@ -197,18 +245,20 @@ def get_stock_and_option_dict(
                 quantity_value,
                 price_value,
                 amount_value,
-                day_trade_dict[date_value][-1][1])
+                day_trade_dict[date_value][-1][1]
+            )
             stock_data_dict[key] = (quantity_sum_value, amount_sum_value)
         elif transcode_value in instrument_config_dict['option']:  
             key, quantity_sum_value, amount_sum_value = get_option_dict(
                 instrument_config_dict, 
                 option_data_dict,
                 date_value,       
-                description_value,
+                description_value.strip(),
                 transcode_value, 
                 quantity_value,
                 price_value,
-                amount_value)
+                amount_value
+            )
             option_data_dict[key] = (quantity_sum_value, amount_sum_value)
         else:
             logger.warning(f'Found undefined transcode: {transcode_value}\n')
@@ -224,11 +274,16 @@ def save_option_result(
     """Save option result into special format
 
     Args:
+        instrument_config_dict: A dictionary for configuration settings
+        option_data_dict: A dictionary containing the option data to save
+        output_xlsx_filepath:  The string of XLSX saving file path
+        logger: An object for logging messages
 
     Returns:
+        None
 
     Raises:
-
+        None
     """
 
     position_data_dict = defaultdict(lambda: (0, 0.0))
@@ -242,8 +297,10 @@ def save_option_result(
         quantity_value = value[0]
         amount_value = value[1]
         
-        if (instrument_config_dict['option'][transcode_value][0] == 1
-            and position_data_dict[description_value][0] < 0):
+        if (
+            instrument_config_dict['option'][transcode_value][0] == 1
+            and position_data_dict[description_value][0] < 0
+        ):
             quantity_value = -quantity_value
 
         position_data_dict[description_value] = (
@@ -251,22 +308,26 @@ def save_option_result(
             position_data_dict[description_value][1] + amount_value)
 
         if position_data_dict[description_value][0] != 0:
-            option_data_list.append([str(date_value),
-                                     str(description_value),
-                                     str(transcode_value),
-                                     int(quantity_value),
-                                     float(price_value),
-                                     float(amount_value),
-                                     None])
+            option_data_list.append(
+                [str(date_value),
+                 str(description_value),
+                 str(transcode_value),
+                 int(quantity_value),
+                 float(price_value),
+                 float(amount_value),
+                 None]
+            )
         else:
             logger.info(f'Calculating profit on date: {date_value}...\n')
-            option_data_list.append([str(date_value),
-                                     str(description_value),
-                                     str(transcode_value),
-                                     int(quantity_value),
-                                     float(price_value),
-                                     float(amount_value),
-                                     float(position_data_dict[description_value][1])])
+            option_data_list.append(
+                [str(date_value),
+                 str(description_value),
+                 str(transcode_value),
+                 int(quantity_value),
+                 float(price_value),
+                 float(amount_value),
+                 float(position_data_dict[description_value][1])]
+            )
             position_data_dict[description_value] = (0, 0.0)
 
     option_df = pd.DataFrame(
@@ -284,11 +345,16 @@ def save_stock_result(
     """Save stock result into special format
 
     Args:
+        instrument_config_dict: A dictionary for configuration settings
+        stock_data_dict:  A dictionary containing the stock data to save
+        output_xlsx_filepath:  The string of XLSX saving file path
+        logger: An object for logging messages
 
     Returns:
+        None
 
     Raises:
-
+        None
     """
 
     quantity_sum_value = 0
@@ -303,31 +369,37 @@ def save_stock_result(
         amount_value = value[1]
 
         if instrument_config_dict['stock'][transcode_value][0] == 2: 
-            stock_data_list.append([str(date_value), 
-                                    str(transcode_value), 
-                                    int(0), 
-                                    float(0),
-                                    float(amount_value), 
-                                    float(amount_value)])
+            stock_data_list.append(
+                [str(date_value),
+                 str(transcode_value), 
+                 int(0), 
+                 float(0),
+                 float(amount_value), 
+                 float(amount_value)]
+            )
         else:
             quantity_sum_value += quantity_value
             amount_sum_value += amount_value
 
             if quantity_sum_value != 0:
-                stock_data_list.append([str(date_value),
-                                        str(transcode_value),
-                                        int(quantity_value),
-                                        float(price_value),
-                                        float(amount_value),
-                                        None])
+                stock_data_list.append(
+                    [str(date_value),
+                     str(transcode_value),
+                     int(quantity_value),
+                     float(price_value), 
+                     float(amount_value), 
+                     None]
+                )
             else:
                 logger.info(f'Calculating profit on date: {date_value}...\n')
-                stock_data_list.append([str(date_value),
-                                        str(transcode_value),
-                                        int(quantity_value),
-                                        float(price_value),
-                                        float(amount_value),
-                                        float(amount_sum_value)])
+                stock_data_list.append(
+                    [str(date_value),
+                     str(transcode_value),
+                     int(quantity_value),
+                     float(price_value),
+                     float(amount_value),
+                     float(amount_sum_value)]
+                )
                 amount_sum_value = 0.0
    
     stock_df = pd.DataFrame(stock_data_list, columns=STOCK_EXCEL_COL_NAME_LIST) 
@@ -344,7 +416,7 @@ def main ():
         os.makedirs(args.log_files_path)
 
     logger, logger_output_filepath = initial_log(args.log_files_path)
-    input_csv_filepath = os.path.join(args.data_files_path, args.input_csv_name)  
+    input_csv_filepath = os.path.join(args.data_files_path, args.input_csv_name)
     logger.info('=' * 80)
     logger.info('Start convertor execution')
     logger.info(f'The csv file load from: {input_csv_filepath}')
@@ -354,34 +426,40 @@ def main ():
         INSTRUMENT_TRANSCODE_CONFIG_PATCH, logger)
     input_df = load_dataframe_from_csv(input_csv_filepath, logger)
     input_df = convert_col_type_for_dataframe(input_df, 'Quantity', 'int')
-    input_df['Activity Date'] = input_df['Activity Date'].apply(
-        convert_date_to_standard_format)
-    input_df['Price'] = input_df['Price'].apply(
-        convert_accounting_string_to_float)
-    input_df['Amount'] = input_df['Amount'].apply(
-        convert_accounting_string_to_float)
+    input_df['Activity Date'] = (
+        input_df['Activity Date'].apply(convert_date_to_standard_format))
+    input_df['Instrument'] = (
+        input_df['Instrument'].apply(convert_common_instrument_to_one))
+    input_df['Price'] = (
+        input_df['Price'].apply(convert_accounting_string_to_float))
+    input_df['Amount'] = (
+        input_df['Amount'].apply(convert_accounting_string_to_float))
 
     for instrument_value, instrument_df in input_df.groupby('Instrument'):
-        msg = ('Converting robinhood stock and option reports for: '
-               f'{instrument_value}...\n')
-        logger.info(msg)
+        logger.info(
+            'Converting robinhood stock and option reports for: '
+            f'{instrument_value}...\n'
+        )
         stock_data_dict, option_data_dict = get_stock_and_option_dict(
             instrument_config_dict, 
             instrument_df, 
             str(instrument_value), 
-            logger)
+            logger
+        )
         logger.info(f'Saving stock result for: {instrument_value}...\n')
         save_stock_result(
             instrument_config_dict,
             stock_data_dict,
             os.path.join(args.data_files_path, f'{instrument_value}.xlsx'),
-            logger)
+            logger
+        )
         logger.info(f'Saving option result for: {instrument_value}...\n')
         save_option_result(
             instrument_config_dict,
             option_data_dict,
             os.path.join(args.data_files_path, f'{instrument_value}.xlsx'),
-            logger)
+            logger
+        )
 
     logger.info('=' * 80)
     logger.info('Finished convertor execution')
@@ -391,19 +469,26 @@ def main ():
                
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Robinhood reports convertor')
-    parser.add_argument('-i', '--input-csv-name', type=str,
-                        required=True,
-                        help='Input report file name')
-    parser.add_argument('-d', '--data-files-path', type=str,
-                        default=os.path.join(
-                            os.path.abspath(os.path.dirname(__file__)), 'data'),
-                        required=False,
-                        help='Data files input and output path')
-    parser.add_argument('-l', '--log-files-path', type=str,
-                        default=os.path.join(
-                            os.path.abspath(os.path.dirname(__file__)), 'logs'),
-                        required=False,
-                        help='Log files save path')
+    parser.add_argument(
+        '-i', 
+        '--input-csv-name', 
+        type=str,
+        required=True,
+        help='Input report file name')
+    parser.add_argument(
+        '-d', 
+        '--data-files-path', 
+        type=str,
+        default=os.path.join(os.path.abspath(os.path.dirname(__file__)), 'data'),
+        required=False,
+        help='Data files input and output path')
+    parser.add_argument(
+        '-l', 
+        '--log-files-path', 
+        type=str,
+        default=os.path.join(os.path.abspath(os.path.dirname(__file__)), 'logs'),
+        required=False,
+        help='Log files save path')
     args = parser.parse_args()
 
     print('-' * 80 + '\n')
