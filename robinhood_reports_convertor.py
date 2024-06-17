@@ -81,12 +81,12 @@ def get_option_dict(
     Args:
         instrument_config_dict: A dictionary for configuration settings
         option_data_dict: A dictionary containing the option data to save
-        date_value: The date for the option
-        description_value: The description of the option
-        transcode_value: The transcode of the option
-        quantity_value: The quantity of the option
-        price_value: The price of the option.
-        amount_value: The amount of the option
+        date_value: The sting of date for the option
+        description_value: The sting of description for the option
+        transcode_value: The sting of transcode for the option
+        quantity_value: The int of quantity for the option
+        price_value: The float of price for the option
+        amount_value: The float of amount for the option
 
     Returns:
         A tuple containing the option dictionary and any relevant metadata
@@ -142,12 +142,12 @@ def get_stock_dict(
     Args:
         instrument_config_dict: A dictionary for configuration settings
         stock_data_dict: A dictionary containing the stock data to save
-        date_value: The date for the stock
-        transcode_value: The transcode of the stock
-        quantity_value: The quantity of the stock
-        price_value: The price of the stock.
-        amount_value: The amount of the stock
-        day_trade_value: The day trade of the stock 
+        date_value: The sting of date for the stock
+        transcode_value: The sting of transcode for the stock
+        quantity_value: The int of quantity for the stock
+        price_value: The float of price for the stock
+        amount_value: The float of amount for the stock
+        day_trade_value: The int of day trade for the stock
 
     Returns:
         A tuple containing the stock dictionary and any relevant metadata
@@ -198,7 +198,7 @@ def get_stock_and_option_dict(
     Args:
         instrument_config_dict: A dictionary for configuration settings
         instrument_df: The DataFrame containing instrument data
-        instrument_value: The specific value identifying the instrument
+        instrument_value: The string of value identifying the instrument
         logger: An object for logging messages
 
     Returns:
