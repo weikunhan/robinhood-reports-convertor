@@ -87,7 +87,7 @@ def get_non_overlap_dataframe(
     return second_df
 
 def save_first_result(
-    input_df_list: list[pd.DataFrame], 
+    input_df_list: typing.List[pd.DataFrame], 
     output_csv_filepath: str, 
     logger: typing.Any
 ) -> None:
@@ -117,7 +117,7 @@ def save_first_result(
     output_df.to_csv(output_csv_filepath, index=False)
 
 def save_reset_result(
-    input_df_list: list[pd.DataFrame], 
+    input_df_list: typing.List[pd.DataFrame], 
     output_csv_filepath: str, 
     logger: typing.Any
 ) -> None:
@@ -183,7 +183,7 @@ def main ():
             'Loading robinhood stock and option reports for part '
             f'{key}: {value}...\n'
         )
-        input_df_list = [] if last_df is None else [last_df]
+        input_df_list: typing.List[pd.DataFrame] = [last_df] if last_df else []
 
         for csv_info_value in value:
             input_df = load_dataframe_from_csv(
