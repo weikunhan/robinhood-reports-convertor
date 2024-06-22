@@ -55,6 +55,59 @@ INSTRUMENT_TRANSCODE_CONFIG_PATCH = os.path.join(
     'instrument_transcode_config.json'
 )
 
+def calculate_quantity_value_from_balance(
+    instrument_config_dict: dict, 
+    position_data_dict: dict,
+    transcode_value:str,
+    description_value: str,
+    quantity_value: int,
+    balance_quantity_value: int
+) -> int:
+    """Calculates quantity value from balance
+
+    Args:
+        instrument_config_dict: A dictionary for configuration settings
+        position_data_dict: A dictionary containing the option position 
+        transcode_value: The sting of transcode for the option
+        description_value: The sting of description for the option
+        quantity_value: The int of quantity for the option
+        balance_quantity_value: The int of balance quantity for the option
+
+    Returns:
+        The int value calculated quantity value from balance
+    """
+
+    if (
+        instrument_config_dict["option"][transcode_value][0] in (1, 3) 
+        and position_data_dict[description_value][0] > 0
+    ): 
+        return int(balance_quantity_value - quantity_value)
+    
+    return int(balance_quantity_value + quantity_value)
+
+def calculate_quantity_value_from_record(
+    transcode_value: str,
+    quantity_value: int, 
+    record_quantity_value: int
+) -> int:
+    """Calculates quantity value from record
+
+    Args:
+        transcode_value: The sting of transcode for the option
+        quantity_value: The int of quantity for the option
+        record_quantity_value: The int of record quantity for the option
+
+    Returns:
+        The int value calculated quantity value from record
+    """
+    
+    if transcode_value in ('BTO', 'STC'):
+        return int(quantity_value + record_quantity_value)
+    elif transcode_value in ('BTC', 'STO'):
+        return int(quantity_value - record_quantity_value)
+    else:
+        return int(0)
+    
 def get_option_dict(
     instrument_config_dict: dict,
     option_data_dict: dict,
@@ -95,26 +148,20 @@ def get_option_dict(
         None
     """   
 
-    factor_value = instrument_config_dict['option'][transcode_value][1]
+    factor_value: int = instrument_config_dict['option'][transcode_value][1]
     key_value = f'{date_value}*{transcode_value}*{price_value}*{description_value}' 
 
-    if instrument_config_dict['option'][transcode_value][0] == 1:
+    if instrument_config_dict['option'][transcode_value][0] in (1, 2, 3):
         return (
             key_value, 
-            option_data_dict[key_value][0] - factor_value * quantity_value,
-            float(0)
-        )
-    elif instrument_config_dict['option'][transcode_value][0] == 2:
-        return (
-            key_value, 
-            option_data_dict[key_value][0] + factor_value * quantity_value,
+            int(option_data_dict[key_value][0] + factor_value * quantity_value),
             float(0)
         )
     else:
         return (
             key_value, 
-            option_data_dict[key_value][0] + factor_value * quantity_value,
-            option_data_dict[key_value][1] - factor_value * amount_value
+            int(option_data_dict[key_value][0] + factor_value * quantity_value),
+            float(option_data_dict[key_value][1] - factor_value * amount_value)
         )
 
 def get_stock_dict(
@@ -156,33 +203,33 @@ def get_stock_dict(
         None
     """   
 
-    factor_value = instrument_config_dict['stock'][transcode_value][1]
+    factor_value: int = instrument_config_dict['stock'][transcode_value][1]
     key_value = f'{date_value}*{transcode_value}*{price_value}*{day_trade_value}' 
  
     if instrument_config_dict['stock'][transcode_value][0] == 1:
         if stock_data_dict[key_value][0] == 0:
             return (
                 key_value, 
-                stock_data_dict[key_value][0] + factor_value * quantity_value,
+                int(stock_data_dict[key_value][0] + factor_value * quantity_value),
                 float(0)
             )
         else:
             return (
                 key_value, 
-                stock_data_dict[key_value][0] - factor_value * quantity_value,
+                int(stock_data_dict[key_value][0] - factor_value * quantity_value),
                 float(0)
             )
     elif instrument_config_dict['stock'][transcode_value][0] == 2:
         return (
             key_value, 
             int(0),
-            stock_data_dict[key_value][1] + factor_value * amount_value
+            float(stock_data_dict[key_value][1] + factor_value * amount_value)
         )
     else:
         return (
             key_value, 
-            stock_data_dict[key_value][0] + factor_value * quantity_value,
-            stock_data_dict[key_value][1] - factor_value * amount_value
+            int(stock_data_dict[key_value][0] + factor_value * quantity_value),
+            float(stock_data_dict[key_value][1] - factor_value * amount_value)
         )
 
 def get_stock_and_option_dict(
@@ -208,9 +255,11 @@ def get_stock_and_option_dict(
         None
     """
 
-    stock_data_dict = defaultdict(lambda: (0, 0.0))
-    option_data_dict = defaultdict(lambda: (0, 0.0))
-    day_trade_dict = {}
+    stock_data_dict: defaultdict[str, typing.Tuple[int, float]] = defaultdict(
+        lambda: (0, 0.0))
+    option_data_dict: defaultdict[str, typing.Tuple[int, float]] = defaultdict(
+        lambda: (0, 0.0))
+    day_trade_dict: dict = {}
 
     for row in tqdm.tqdm(
         instrument_df.itertuples(index=False), 
@@ -218,10 +267,7 @@ def get_stock_and_option_dict(
         desc='Converting in progress'
     ):
         date_value = row[0]
-        description_value = (
-            re.sub(rf'{instrument_value}\d*', instrument_value, row[4])
-            .split(f'{instrument_value} ')[-1]
-        )
+        description_value = re.split(rf'(?={instrument_value}\d*)', row[4])[-1]
         transcode_value = row[5]
         quantity_value = row[6]
         price_value = row[7]
@@ -286,8 +332,10 @@ def save_option_result(
         None
     """
 
-    position_data_dict = defaultdict(lambda: (0, 0.0))
-    option_data_list = []
+    position_data_dict: defaultdict[str, typing.Tuple[int, float]] = defaultdict(
+        lambda: (0, 0.0))
+    position_data_set: set = set() 
+    option_data_list: list = []
 
     for key, value in reversed(option_data_dict.items()):
         date_value = key.split('*')[0]
@@ -297,15 +345,33 @@ def save_option_result(
         quantity_value = value[0]
         amount_value = value[1]
         
-        if (
-            instrument_config_dict['option'][transcode_value][0] == 1
-            and position_data_dict[description_value][0] < 0
-        ):
-            quantity_value = -quantity_value
+        if description_value in position_data_set:
+            position_data_dict[description_value] = (
+                calculate_quantity_value_from_record(
+                    transcode_value,
+                    quantity_value,
+                    position_data_dict[description_value][0]
+                ),
+                amount_value
+            )
+            position_data_set.remove(description_value)
+        else:
+            if (
+                instrument_config_dict["option"][transcode_value][0] == 3
+                and description_value not in position_data_dict
+            ):
+                position_data_set.add(description_value)
 
-        position_data_dict[description_value] = (
-            position_data_dict[description_value][0] + quantity_value,
-            position_data_dict[description_value][1] + amount_value)
+            position_data_dict[description_value] = (
+                calculate_quantity_value_from_balance(
+                    instrument_config_dict,
+                    position_data_dict,
+                    transcode_value,
+                    description_value,
+                    quantity_value,
+                    position_data_dict[description_value][0]),
+                position_data_dict[description_value][1] + amount_value
+            )
 
         if position_data_dict[description_value][0] != 0:
             option_data_list.append(
@@ -357,9 +423,9 @@ def save_stock_result(
         None
     """
 
-    quantity_sum_value = 0
-    amount_sum_value = 0.0
-    stock_data_list = []
+    quantity_sum_value: int = 0
+    amount_sum_value: float = 0.0
+    stock_data_list: list = []
         
     for key, value in reversed(stock_data_dict.items()):
         date_value = key.split('*')[0]
