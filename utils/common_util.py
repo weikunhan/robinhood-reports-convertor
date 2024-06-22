@@ -50,10 +50,10 @@ def convert_accounting_string_to_float(string_value: str) -> float:
     """
 
     if pd.isnull(string_value):
-        return 0.0
+        return float(0.0)
     
     if not string_value:
-        return 0.0
+        return float(0.0)
 
     if '$' in string_value:
         string_value = string_value.replace('$', '')
