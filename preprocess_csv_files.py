@@ -105,8 +105,8 @@ def save_first_result(
         None
     """
 
-    count = 2
-    output_df = input_df_list[0]
+    count: int = 2
+    output_df: pd.DataFrame = input_df_list[0]
 
     for first_df, second_df in zip(input_df_list[:-1], input_df_list[1:]):
         logger.info(f'Processing first part report number is: {count}...\n')
@@ -135,8 +135,8 @@ def save_reset_result(
         None
     """
 
-    count = 1
-    output_df = pd.DataFrame()
+    count: int = 1
+    output_df: pd.DataFrame = pd.DataFrame()
 
     for first_df, second_df in zip(input_df_list[:-1], input_df_list[1:]):
         logger.info(f'Processing reset part report number is: {count}...\n')
@@ -183,7 +183,9 @@ def main ():
             'Loading robinhood stock and option reports for part '
             f'{key}: {value}...\n'
         )
-        input_df_list: typing.List[pd.DataFrame] = [last_df] if last_df else []
+        input_df_list: typing.List[pd.DataFrame] = (
+            [] if last_df is None else [last_df]
+        )
 
         for csv_info_value in value:
             input_df = load_dataframe_from_csv(
