@@ -57,6 +57,10 @@ class TestPreprocessCsvFiles(unittest.TestCase):
             self.true_df, 'Quantity', 'int')
         self.true_df['Activity Date'] = (
             self.true_df['Activity Date'].apply(convert_date_to_standard_format))
+        self.true_df['Process Date'] = (
+            self.true_df['Process Date'].apply(convert_date_to_standard_format))
+        self.true_df['Settle Date'] = (
+            self.true_df['Settle Date'].apply(convert_date_to_standard_format))
         self.true_df['Instrument'] = (
             self.true_df['Instrument'].apply(convert_common_instrument_to_one))
         self.true_df['Price'] = (
@@ -68,6 +72,10 @@ class TestPreprocessCsvFiles(unittest.TestCase):
             self.test_df, 'Quantity', 'int')
         self.test_df['Activity Date'] = (
             self.test_df['Activity Date'].apply(convert_date_to_standard_format))
+        self.test_df['Process Date'] = (
+            self.test_df['Process Date'].apply(convert_date_to_standard_format))
+        self.test_df['Settle Date'] = (
+            self.test_df['Settle Date'].apply(convert_date_to_standard_format))
         self.test_df['Instrument'] = (
             self.test_df['Instrument'].apply(convert_common_instrument_to_one))
         self.test_df['Price'] = (
